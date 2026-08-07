@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Race bonuses — {{ event.name }}{% endblock %}
+{% block content %}
+<p><a href="/predict/{{ event.id }}">&larr; {{ event.name }}</a></p>
+<h2>Race bonus predictions — {{ event.name }}</h2>
+
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
+
+{% if locked %}
+<p><strong>Race bonus predictions are locked.</strong></p>
+{% else %}
+<form method="post" action="/predict/{{ event.id }}/bonuses">
+  {% for bonus_type, label, kind in bonus_fields %}
+  {% set existing = existing_by_type.get(bonus_type) %}
+  <p>
+    <label>{{ label }}
+      {% if kind == "driver" %}
+        <select name="{{ bonus_type }}" required>
+          <option value="">—</option>
+          {% for driver in entered_drivers %}
+          <option value="{{ driver.id }}" {% if existing and existing.driver_id == driver.id %}selected{% endif %}>
+            {{ driver.name }} ({{ driver.team.name }})
+          </option>
+          {% endfor %}
+        </select>
+      {% elif kind == "bool" %}
+        <select name="{{ bonus_type }}" required>
+          <option value="">—</option>
+          <option value="true" {% if existing and existing.bool_value == True %}selected{% endif %}>Yes</option>
+          <option value="false" {% if existing and existing.bool_value == False %}selected{% endif %}>No</option>
+        </select>
+      {% elif kind == "int" %}
+        <input type="number" name="{{ bonus_type }}" min="0"
+               value="{{ existing.int_value if existing and existing.int_value is not none else '' }}" required>
+      {% endif %}
+    </label>
+  </p>
+  {% endfor %}
+  <button type="submit">Save bonus predictions</button>
+</form>
+{% endif %}
+{% endblock %}

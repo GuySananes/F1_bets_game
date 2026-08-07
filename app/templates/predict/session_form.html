@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ label }} predictions — {{ event.name }}{% endblock %}
+{% block content %}
+<p><a href="/predict/{{ event.id }}">&larr; {{ event.name }}</a></p>
+<h2>{{ label }} predictions — {{ event.name }}</h2>
+
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
+
+{% if locked %}
+<p><strong>Predictions for this session are locked.</strong></p>
+<table>
+  <thead><tr><th>Position</th><th>Driver</th></tr></thead>
+  <tbody>
+    {% for position in positions %}
+    <tr>
+      <td>{{ position }}</td>
+      <td>
+        {% set driver_id = selected_by_position.get(position) %}
+        {% if driver_id %}
+          {% for d in entered_drivers if d.id == driver_id %}{{ d.name }}{% endfor %}
+        {% else %}
+          <span class="muted">(no pick)</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<form method="post" action="/predict/{{ event.id }}/{{ session_type }}">
+  <table>
+    <thead><tr><th>Position</th><th>Driver</th></tr></thead>
+    <tbody>
+      {% for position in positions %}
+      <tr>
+        <td>{{ position }}</td>
+        <td>
+          <select name="position_{{ position }}" required>
+            <option value="">—</option>
+            {% for driver in entered_drivers %}
+            <option value="{{ driver.id }}" {% if selected_by_position.get(position) == driver.id %}selected{% endif %}>
+              {{ driver.name }} ({{ driver.team.name }})
+            </option>
+            {% endfor %}
+          </select>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <button type="submit">Save predictions</button>
+</form>
+{% endif %}
+{% endblock %}

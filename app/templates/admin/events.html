@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Events — Admin{% endblock %}
+{% block content %}
+<p><a href="/admin">&larr; Admin</a></p>
+<h2>Events — {{ season.name }}</h2>
+<table>
+  <thead>
+    <tr><th>Round</th><th>Name</th><th>Sprint?</th><th>Grid size</th><th>Qualifying locks</th><th>Sprint locks</th><th>Race locks</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for event in events %}
+    <tr>
+      <td>{{ event.round_number }}</td>
+      <td>{{ event.name }}</td>
+      <td>{{ "Yes" if event.has_sprint else "No" }}</td>
+      <td>{{ event.grid_size }}</td>
+      <td>{{ event.qualifying_start_time }}</td>
+      <td>{{ event.sprint_start_time or "—" }}</td>
+      <td>{{ event.race_start_time }}</td>
+      <td>
+        <a href="/admin/events/{{ event.id }}/entries">Set entries</a> ·
+        <a href="/admin/events/{{ event.id }}/results">Results</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h3>New event</h3>
+<p class="muted">Predictions for each session lock automatically once its start time passes.</p>
+<form method="post" action="/admin/events">
+  <label>Round number <input type="number" name="round_number" min="1" required></label>
+  <label>Name <input type="text" name="name" required></label>
+  <label><input type="checkbox" name="has_sprint" id="has_sprint"> Has sprint</label>
+  <label>Grid size <input type="number" name="grid_size" min="1" required></label>
+  <label>Qualifying start <input type="datetime-local" name="qualifying_start_time" required></label>
+  <label>Sprint start <input type="datetime-local" name="sprint_start_time"></label>
+  <label>Race start <input type="datetime-local" name="race_start_time" required></label>
+  <button type="submit">Create event</button>
+</form>
+{% endblock %}

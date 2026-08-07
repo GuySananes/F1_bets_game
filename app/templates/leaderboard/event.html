@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ event.name }} — Leaderboard{% endblock %}
+{% block content %}
+<p><a href="/leaderboard">&larr; Season leaderboard</a></p>
+<h2>{{ event.name }} — breakdown</h2>
+<table>
+  <thead>
+    <tr>
+      <th>User</th>
+      {% for s in sessions %}<th>{{ s|capitalize }}</th>{% endfor %}
+      <th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      <td>{{ row.user.username }}</td>
+      {% for s in sessions %}
+      <td>{{ row.by_session[s].points if s in row.by_session else "—" }}</td>
+      {% endfor %}
+      <td><strong>{{ row.total }}</strong></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% for row in rows %}
+<h3>{{ row.user.username }} — detail</h3>
+{% for s in sessions %}
+{% if s in row.by_session %}
+{% set log = row.by_session[s] %}
+<details>
+  <summary>{{ s|capitalize }} ({{ log.points }} pts)</summary>
+  <table>
+    <thead><tr><th>Predicted position</th><th>Driver</th><th>Actual position</th><th>Points</th></tr></thead>
+    <tbody>
+      {% for p in log.detail.position %}
+      <tr>
+        <td>{{ p.predicted_position }}</td>
+        <td>{{ driver_names.get(p.driver_id, p.driver_id) }}</td>
+        <td>{{ p.actual_position if p.actual_position is not none else "—" }}</td>
+        <td>{{ p.points }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if log.detail.bonus %}
+  <table>
+    <thead><tr><th>Bonus</th><th>Correct?</th><th>Points</th></tr></thead>
+    <tbody>
+      {% for b in log.detail.bonus %}
+      <tr>
+        <td>{{ b.bonus_type }}</td>
+        <td>{{ "Yes" if b.correct else "No" }}</td>
+        <td>{{ b.points }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</details>
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Events — F1 Prediction League{% endblock %}
+{% block content %}
+<h2>Race weekends</h2>
+<p class="muted">Logged in as {{ current_user.username }}.</p>
+<table>
+  <thead>
+    <tr><th>Round</th><th>Name</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for event in events %}
+    <tr>
+      <td>{{ event.round_number }}</td>
+      <td>{{ event.name }}</td>
+      <td><a href="/predict/{{ event.id }}">Predict</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Race results — {{ event.name }}{% endblock %}
+{% block content %}
+<p><a href="/admin/events/{{ event.id }}/results">&larr; Results</a></p>
+<h2>Race results — {{ event.name }}</h2>
+<p class="muted">For classified finishers, enter their finishing position. For DNFs, check the box and enter
+retirement order instead (1 = retired first — retired-first drivers are ranked last overall).</p>
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
+<form method="post" action="/admin/events/{{ event.id }}/results/race">
+  <table>
+    <thead><tr><th>Driver</th><th>Finishing position</th><th>DNF</th><th>Retirement order</th></tr></thead>
+    <tbody>
+      {% for driver in entered_drivers %}
+      {% set existing = existing_by_driver.get(driver.id) %}
+      <tr>
+        <td>{{ driver.name }} ({{ driver.team.name }})</td>
+        <td><input type="number" name="position_{{ driver.id }}" min="1"
+                    value="{{ existing.actual_position if existing and not existing.dnf else '' }}"></td>
+        <td><input type="checkbox" name="dnf_{{ driver.id }}" {% if existing and existing.dnf %}checked{% endif %}></td>
+        <td><input type="number" name="retired_at_{{ driver.id }}" min="1"></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <button type="submit">Save results</button>
+</form>
+{% endblock %}

@@ -55,6 +55,12 @@ For each position you predicted:
 - Can join at any point in the season, starting at 0 points (points are always computed from logged history, never a manually-reset counter).
 - Admin flag on at least one account for roster/name management.
 
+### Prediction Lock Time
+- Each session (qualifying, sprint, race) has its own start time, set by the admin when creating the event.
+- Predictions for a session lock automatically, server-side, once that session's start time passes — enforced on both the submission route and the UI (a locked session renders read-only instead of an editable form).
+- Before the lock, users can freely edit/resubmit predictions any number of times; only the latest version at lock time is scored.
+- Race bonus predictions share the race session's lock time.
+
 ---
 
 ## Database Schema (draft)
@@ -69,13 +75,18 @@ For each position you predicted:
 `id, season_id, team_id, name, is_reserve, car_number, active`
 
 **events** (race weekends)
-`id, season_id, round_number, name, has_sprint, grid_size`
+`id, season_id, round_number, name, has_sprint, grid_size, qualifying_start_time, sprint_start_time, race_start_time`
+`sprint_start_time` is only set when `has_sprint` is true. Each session's predictions lock automatically once its start time passes — see Prediction Lock Time below.
 
 **event_entries** (actual field for a given weekend — handles substitutions/missing drivers)
 `id, event_id, driver_id, is_substitute, substituted_for_driver_id`
 
 **users**
 `id, username, password_hash, is_admin, created_at`
+
+**sessions**
+`token (PK), user_id, created_at, expires_at`
+Server-side login sessions: the client holds only an opaque, randomly generated token (in an HttpOnly cookie); each row here is the server-side record it maps to. A session is valid only while a matching, unexpired row exists — logging out deletes the row.
 
 **predictions**
 `id, user_id, event_id, session_type [qualifying|sprint|race], predicted_position, driver_id`
@@ -94,13 +105,14 @@ For each position you predicted:
 
 **points_log**
 `id, user_id, event_id, session_type, points, detail (JSON breakdown)`
+- Unique per (user, event, session_type)
+- Race bonus points are folded into the `race` row (there's no separate `session_type` for bonuses): `points` is position points + bonus points combined, and `detail` carries both breakdowns (`{"position": [...], "bonus": [...]}`) so they can still be shown separately.
+- Recomputed (upserted) automatically whenever an admin enters or edits results for that session, or bonus results for a race.
 
 ---
 
 ## Open Decisions (defaults assumed — confirm or override before/at build time)
 1. **MVP definition:** assumed this refers to F1's official "Driver of the Day" fan vote result (published after each race), entered by the admin like any other result. If you mean something else (e.g. your own group's subjective pick), let me know — it changes nothing structurally (still a driver pick, 3 pts) but affects how the admin sources the correct answer.
-2. **Prediction lock time:** assumed each session has a deadline (e.g. session start time) after which predictions are locked and read-only. Confirm whether this should be enforced in-app or left trust-based among friends.
-3. **Editing predictions:** assumed users can freely edit/resubmit predictions any number of times before the lock, with only the final version scored.
 
 ---
 

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Admin — F1 Prediction League{% endblock %}
+{% block content %}
+<h2>Admin — {{ season.name }}</h2>
+<nav>
+  <ul>
+    <li><a href="/admin/teams">Teams</a></li>
+    <li><a href="/admin/drivers">Drivers</a></li>
+    <li><a href="/admin/events">Events</a></li>
+  </ul>
+</nav>
+<p class="muted">Logged in as {{ current_user.username }}.</p>
+{% endblock %}

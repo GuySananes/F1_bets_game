@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Entries — {{ event.name }}{% endblock %}
+{% block content %}
+<p><a href="/admin/events">&larr; Events</a></p>
+<h2>Entries — {{ event.name }} (round {{ event.round_number }})</h2>
+<p class="muted">Check "Racing" for every driver actually on the grid this weekend. For a
+substitute, also check "Sub" and pick who they're standing in for.</p>
+
+<form method="post" action="/admin/events/{{ event.id }}/entries">
+  <table>
+    <thead>
+      <tr><th>Team</th><th>Driver</th><th>Racing</th><th>Sub</th><th>Substituting for</th></tr>
+    </thead>
+    <tbody>
+      {% for driver in season_drivers %}
+      {% set entry = entries_by_driver.get(driver.id) %}
+      <tr>
+        <td>{{ driver.team.name }}</td>
+        <td>{{ driver.name }}{% if driver.is_reserve %} <span class="muted">(reserve)</span>{% endif %}</td>
+        <td><input type="checkbox" name="entered_{{ driver.id }}" {% if entry %}checked{% endif %}></td>
+        <td><input type="checkbox" name="sub_{{ driver.id }}" {% if entry and entry.is_substitute %}checked{% endif %}></td>
+        <td>
+          <select name="subfor_{{ driver.id }}">
+            <option value="">—</option>
+            {% for primary in primary_drivers if primary.id != driver.id %}
+            <option value="{{ primary.id }}" {% if entry and entry.substituted_for_driver_id == primary.id %}selected{% endif %}>
+              {{ primary.name }} ({{ primary.team.name }})
+            </option>
+            {% endfor %}
+          </select>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <button type="submit">Save entries</button>
+</form>
+{% endblock %}

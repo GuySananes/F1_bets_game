@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ label }} results — {{ event.name }}{% endblock %}
+{% block content %}
+<p><a href="/admin/events/{{ event.id }}/results">&larr; Results</a></p>
+<h2>{{ label }} results — {{ event.name }}</h2>
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
+<form method="post" action="/admin/events/{{ event.id }}/results/{{ session_type }}">
+  <table>
+    <thead><tr><th>Driver</th><th>Finishing position</th></tr></thead>
+    <tbody>
+      {% for driver in entered_drivers %}
+      {% set existing = existing_by_driver.get(driver.id) %}
+      <tr>
+        <td>{{ driver.name }} ({{ driver.team.name }})</td>
+        <td><input type="number" name="position_{{ driver.id }}" min="1"
+                    value="{{ existing.actual_position if existing else '' }}" required></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <button type="submit">Save results</button>
+</form>
+{% endblock %}

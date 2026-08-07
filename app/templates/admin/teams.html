@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Teams — Admin{% endblock %}
+{% block content %}
+<p><a href="/admin">&larr; Admin</a></p>
+<h2>Teams — {{ season.name }}</h2>
+<table>
+  <thead>
+    <tr><th>Name</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for team in teams %}
+    <tr>
+      <td>
+        <form class="inline" method="post" action="/admin/teams/{{ team.id }}">
+          <input type="text" name="name" value="{{ team.name }}" required>
+          <button type="submit">Save</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

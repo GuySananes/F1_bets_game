@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard — F1 Prediction League{% endblock %}
+{% block content %}
+<h2>Season leaderboard{% if season %} — {{ season.name }}{% endif %}</h2>
+<table>
+  <thead><tr><th>#</th><th>User</th><th>Total points</th></tr></thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td>{{ row.user.username }}</td>
+      <td>{{ row.total }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3" class="muted">No points logged yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

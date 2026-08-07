@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Drivers — Admin{% endblock %}
+{% block content %}
+<p><a href="/admin">&larr; Admin</a></p>
+<h2>Drivers — {{ season.name }}</h2>
+<table>
+  <thead>
+    <tr><th>Team</th><th>Name</th><th>Reserve</th><th>Active</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for driver in drivers %}
+    <tr>
+      <td>{{ driver.team.name }}</td>
+      <td colspan="4">
+        <form class="inline" method="post" action="/admin/drivers/{{ driver.id }}">
+          <input type="text" name="name" value="{{ driver.name }}" required>
+          <label><input type="checkbox" name="is_reserve" {% if driver.is_reserve %}checked{% endif %}> Reserve</label>
+          <label><input type="checkbox" name="active" {% if driver.active %}checked{% endif %}> Active</label>
+          <button type="submit">Save</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

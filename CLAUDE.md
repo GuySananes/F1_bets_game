@@ -19,6 +19,9 @@ F1 prediction league PWA for a small friend group (<20 users). Full rules and sc
 - Every new feature that touches scoring, points, or roster/event admin needs a test before being considered done.
 - Migrations are the only way schema changes happen — never hand-edit a deployed DB.
 
+## Documentation
+Any change to rules, schema, stack, or architecture must be reflected in the docs before the task is considered done — see `.claude/skills/doc-maintenance/SKILL.md` for exactly which files own what and how to keep them in sync.
+
 ## Workflow
 - Work one phase of `implementation_order.md` at a time. At each checkpoint, summarize what was built and wait for confirmation before continuing.
 - If a rule in the spec seems ambiguous or you're about to guess at behavior not explicitly stated, stop and ask rather than assuming.

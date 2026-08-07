@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ event.name }} — Predictions{% endblock %}
+{% block content %}
+<p><a href="/predict">&larr; All events</a></p>
+<h2>{{ event.name }} (round {{ event.round_number }})</h2>
+<table>
+  <thead>
+    <tr><th>Session</th><th>Locks at</th><th>Status</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for s in sessions %}
+    <tr>
+      <td>{{ s.label }}</td>
+      <td>{{ s.start_time }}</td>
+      <td>{{ "Locked" if s.locked else "Open" }}</td>
+      <td><a href="/predict/{{ event.id }}/{{ s.session_type }}">{{ "View" if s.locked else "Predict" }}</a></td>
+    </tr>
+    {% endfor %}
+    <tr>
+      <td>Race bonuses</td>
+      <td>{{ event.race_start_time }}</td>
+      <td>{{ "Locked" if bonus_locked else "Open" }}</td>
+      <td><a href="/predict/{{ event.id }}/bonuses">{{ "View" if bonus_locked else "Predict" }}</a></td>
+    </tr>
+  </tbody>
+</table>
+{% endblock %}
