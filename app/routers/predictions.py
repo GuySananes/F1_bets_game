@@ -6,7 +6,18 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import require_login_page
-from app.models import BonusPrediction, BonusType, Driver, Event, Prediction, Season, SessionType, Team, User
+from app.models import (
+    BonusPrediction,
+    BonusType,
+    Driver,
+    Event,
+    PointsLog,
+    Prediction,
+    Season,
+    SessionType,
+    Team,
+    User,
+)
 from app.prediction_constants import BONUS_FIELDS, SESSION_LABELS
 from app.templating import templates
 
@@ -87,6 +98,9 @@ def overview(
         for s in sessions
     ]
 
+    my_logs = db.query(PointsLog).filter_by(user_id=current_user.id, event_id=event_id).all()
+    my_points = sum(log.points for log in my_logs) if my_logs else None
+
     return templates.TemplateResponse(
         request,
         "predict/overview.html",
@@ -94,70 +108,28 @@ def overview(
             "current_user": current_user,
             "event": event,
             "sessions": session_info,
-            "bonus_locked": event.is_locked("race"),
+            "my_points": my_points,
         },
     )
 
 
-@router.get("/{event_id}/bonuses")
-def bonus_form(
-    event_id: int,
-    request: Request,
-    current_user: User = Depends(require_login_page),
-    db: Session = Depends(get_db),
-):
-    event = get_event_or_404(db, event_id)
-    entered_drivers = get_entered_drivers(db, event)
-
+def get_existing_bonus_by_type(db: Session, current_user: User, event_id: int) -> dict:
     existing = (
         db.query(BonusPrediction).filter_by(user_id=current_user.id, event_id=event_id).all()
     )
-    existing_by_type = {b.bonus_type.value if hasattr(b.bonus_type, "value") else b.bonus_type: b for b in existing}
-
-    return templates.TemplateResponse(
-        request,
-        "predict/bonus_form.html",
-        {
-            "current_user": current_user,
-            "event": event,
-            "locked": event.is_locked("race"),
-            "entered_drivers": entered_drivers,
-            "bonus_fields": BONUS_FIELDS,
-            "existing_by_type": existing_by_type,
-            "error": None,
-        },
-    )
+    return {b.bonus_type.value if hasattr(b.bonus_type, "value") else b.bonus_type: b for b in existing}
 
 
-@router.post("/{event_id}/bonuses")
-async def submit_bonuses(
-    event_id: int,
-    request: Request,
-    current_user: User = Depends(require_login_page),
-    db: Session = Depends(get_db),
-):
-    event = get_event_or_404(db, event_id)
-
-    if event.is_locked("race"):
-        raise HTTPException(status_code=403, detail="Race bonus predictions are locked")
-
-    entered_drivers = get_entered_drivers(db, event)
-    entered_ids = {d.id for d in entered_drivers}
-
-    form = await request.form()
-    error = None
+def parse_bonus_fields(form, entered_ids: set) -> tuple[dict, Optional[str]]:
     parsed = {}
-
     for bonus_type, _label, kind in BONUS_FIELDS:
         raw = form.get(bonus_type)
         if not raw:
-            error = f"'{bonus_type}' must be answered."
-            break
+            return parsed, f"'{bonus_type}' must be answered."
         if kind == "driver":
             driver_id = int(raw)
             if driver_id not in entered_ids:
-                error = "Selected driver is not entered for this event."
-                break
+                return parsed, "Selected driver is not entered for this event."
             parsed[bonus_type] = {"driver_id": driver_id}
         elif kind == "bool":
             parsed[bonus_type] = {"bool_value": raw == "true"}
@@ -165,44 +137,8 @@ async def submit_bonuses(
             try:
                 parsed[bonus_type] = {"int_value": int(raw)}
             except ValueError:
-                error = f"'{bonus_type}' must be a number."
-                break
-
-    if error is not None:
-        existing = (
-            db.query(BonusPrediction).filter_by(user_id=current_user.id, event_id=event_id).all()
-        )
-        existing_by_type = {b.bonus_type.value if hasattr(b.bonus_type, "value") else b.bonus_type: b for b in existing}
-        return templates.TemplateResponse(
-            request,
-            "predict/bonus_form.html",
-            {
-                "current_user": current_user,
-                "event": event,
-                "locked": False,
-                "entered_drivers": entered_drivers,
-                "bonus_fields": BONUS_FIELDS,
-                "existing_by_type": existing_by_type,
-                "error": error,
-            },
-            status_code=400,
-        )
-
-    db.query(BonusPrediction).filter_by(user_id=current_user.id, event_id=event_id).delete()
-    for bonus_type, values in parsed.items():
-        db.add(
-            BonusPrediction(
-                user_id=current_user.id,
-                event_id=event_id,
-                bonus_type=BonusType(bonus_type),
-                driver_id=values.get("driver_id"),
-                bool_value=values.get("bool_value"),
-                int_value=values.get("int_value"),
-            )
-        )
-    db.commit()
-
-    return RedirectResponse(url=f"/predict/{event_id}", status_code=303)
+                return parsed, f"'{bonus_type}' must be a number."
+    return parsed, None
 
 
 @router.get("/{event_id}/{session_type}")
@@ -226,21 +162,24 @@ def session_form(
     )
     selected_by_position = {p.predicted_position: p.driver_id for p in existing}
 
-    return templates.TemplateResponse(
-        request,
-        "predict/session_form.html",
-        {
-            "current_user": current_user,
-            "event": event,
-            "session_type": session_type,
-            "label": SESSION_LABELS[session_type],
-            "locked": event.is_locked(session_type),
-            "positions": list(range(1, position_count + 1)),
-            "entered_drivers": entered_drivers,
-            "selected_by_position": selected_by_position,
-            "error": None,
-        },
-    )
+    show_bonuses = session_type == "race"
+    context = {
+        "current_user": current_user,
+        "event": event,
+        "session_type": session_type,
+        "label": SESSION_LABELS[session_type],
+        "locked": event.is_locked(session_type),
+        "positions": list(range(1, position_count + 1)),
+        "entered_drivers": entered_drivers,
+        "selected_by_position": selected_by_position,
+        "error": None,
+        "show_bonuses": show_bonuses,
+    }
+    if show_bonuses:
+        context["bonus_fields"] = BONUS_FIELDS
+        context["existing_bonus_by_type"] = get_existing_bonus_by_type(db, current_user, event_id)
+
+    return templates.TemplateResponse(request, "predict/session_form.html", context)
 
 
 @router.post("/{event_id}/{session_type}")
@@ -257,6 +196,7 @@ async def submit_session(
     if event.is_locked(session_type):
         raise HTTPException(status_code=403, detail="Predictions for this session are locked")
 
+    show_bonuses = session_type == "race"
     entered_drivers = get_entered_drivers(db, event)
     entered_ids = {d.id for d in entered_drivers}
     position_count = position_count_for(event, session_type, len(entered_drivers))
@@ -279,22 +219,28 @@ async def submit_session(
     if error is None and len(set(selected_by_position.values())) != len(selected_by_position):
         error = "Each driver can only be picked for one position."
 
+    parsed_bonuses: dict = {}
+    if error is None and show_bonuses:
+        parsed_bonuses, error = parse_bonus_fields(form, entered_ids)
+
     if error is not None:
+        context = {
+            "current_user": current_user,
+            "event": event,
+            "session_type": session_type,
+            "label": SESSION_LABELS[session_type],
+            "locked": False,
+            "positions": list(range(1, position_count + 1)),
+            "entered_drivers": entered_drivers,
+            "selected_by_position": selected_by_position,
+            "error": error,
+            "show_bonuses": show_bonuses,
+        }
+        if show_bonuses:
+            context["bonus_fields"] = BONUS_FIELDS
+            context["existing_bonus_by_type"] = get_existing_bonus_by_type(db, current_user, event_id)
         return templates.TemplateResponse(
-            request,
-            "predict/session_form.html",
-            {
-                "current_user": current_user,
-                "event": event,
-                "session_type": session_type,
-                "label": SESSION_LABELS[session_type],
-                "locked": False,
-                "positions": list(range(1, position_count + 1)),
-                "entered_drivers": entered_drivers,
-                "selected_by_position": selected_by_position,
-                "error": error,
-            },
-            status_code=400,
+            request, "predict/session_form.html", context, status_code=400,
         )
 
     db.query(Prediction).filter_by(
@@ -310,6 +256,21 @@ async def submit_session(
                 driver_id=driver_id,
             )
         )
+
+    if show_bonuses:
+        db.query(BonusPrediction).filter_by(user_id=current_user.id, event_id=event_id).delete()
+        for bonus_type, values in parsed_bonuses.items():
+            db.add(
+                BonusPrediction(
+                    user_id=current_user.id,
+                    event_id=event_id,
+                    bonus_type=BonusType(bonus_type),
+                    driver_id=values.get("driver_id"),
+                    bool_value=values.get("bool_value"),
+                    int_value=values.get("int_value"),
+                )
+            )
+
     db.commit()
 
     return RedirectResponse(url=f"/predict/{event_id}", status_code=303)

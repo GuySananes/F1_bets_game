@@ -6,9 +6,9 @@
   <thead><tr><th>#</th><th>User</th><th>Total points</th></tr></thead>
   <tbody>
     {% for row in rows %}
-    <tr>
+    <tr class="{{ 'rank-' ~ loop.index if loop.index <= 3 }} {{ 'current-user' if current_user and row.user.id == current_user.id }}">
       <td>{{ loop.index }}</td>
-      <td>{{ row.user.username }}</td>
+      <td>{{ row.user.username }}{% if current_user and row.user.id == current_user.id %} <span class="muted">(you)</span>{% endif %}</td>
       <td>{{ row.total }}</td>
     </tr>
     {% else %}

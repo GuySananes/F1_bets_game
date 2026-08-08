@@ -2,12 +2,16 @@
 {% block title %}Admin — F1 Prediction League{% endblock %}
 {% block content %}
 <h2>Admin — {{ season.name }}</h2>
-<nav>
-  <ul>
-    <li><a href="/admin/teams">Teams</a></li>
-    <li><a href="/admin/drivers">Drivers</a></li>
-    <li><a href="/admin/events">Events</a></li>
-  </ul>
-</nav>
 <p class="muted">Logged in as {{ current_user.username }}.</p>
+<div class="card-list">
+  <a class="card event-card" href="/admin/teams">
+    <div class="event-card-main"><h3>Teams</h3><span class="muted">Rename or manage season teams</span></div>
+  </a>
+  <a class="card event-card" href="/admin/drivers">
+    <div class="event-card-main"><h3>Drivers</h3><span class="muted">Manage roster, reserves, active status</span></div>
+  </a>
+  <a class="card event-card" href="/admin/events">
+    <div class="event-card-main"><h3>Events</h3><span class="muted">Create race weekends, set entries and results</span></div>
+  </a>
+</div>
 {% endblock %}

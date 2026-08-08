@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}F1 Prediction League{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@600;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 
   <link rel="manifest" href="/static/manifest.json">
@@ -22,21 +25,47 @@
   </script>
 </head>
 <body>
-  <header>
-    <h1><a href="/">F1 Prediction League</a></h1>
+  {% set path = request.url.path %}
+  <header class="site-header">
+    <a class="brand" href="/"><span class="brand-mark"></span> F1 Prediction League</a>
     {% if current_user %}
-    <nav>
-      <ul>
-        <li><a href="/predict">Predictions</a></li>
-        <li><a href="/leaderboard">Leaderboard</a></li>
-        {% if current_user.is_admin %}<li><a href="/admin">Admin</a></li>{% endif %}
-        <li><form class="inline" method="post" action="/auth/logout"><button type="submit">Log out</button></form></li>
-      </ul>
-    </nav>
+    <ul class="top-nav">
+      <li><a href="/predict" class="{{ 'active' if path.startswith('/predict') }}">Predictions</a></li>
+      <li><a href="/leaderboard" class="{{ 'active' if path.startswith('/leaderboard') }}">Leaderboard</a></li>
+      {% if current_user.is_admin %}<li><a href="/admin" class="{{ 'active' if path.startswith('/admin') }}">Admin</a></li>{% endif %}
+    </ul>
+    <div class="header-user">
+      <span>{{ current_user.username }}</span>
+      <form class="inline" method="post" action="/auth/logout"><button type="submit" class="btn-ghost">Log out</button></form>
+    </div>
     {% endif %}
   </header>
   <main>
     {% block content %}{% endblock %}
   </main>
+  {% if current_user %}
+  <nav class="bottom-nav">
+    <a href="/predict" class="{{ 'active' if path.startswith('/predict') }}">
+      <svg viewBox="0 0 24 24"><path d="M4 12l6-8h6l-4 8 4 8H10z"/></svg>
+      Predict
+    </a>
+    <a href="/leaderboard" class="{{ 'active' if path.startswith('/leaderboard') }}">
+      <svg viewBox="0 0 24 24"><path d="M8 20V10M14 20V4M20 20v-6M4 20v-3"/></svg>
+      Standings
+    </a>
+    {% if current_user.is_admin %}
+    <a href="/admin" class="{{ 'active' if path.startswith('/admin') }}">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Admin
+    </a>
+    {% endif %}
+    <form class="inline" method="post" action="/auth/logout">
+      <button type="submit">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        Log out
+      </button>
+    </form>
+  </nav>
+  {% endif %}
 </body>
 </html>

@@ -272,6 +272,51 @@ def test_leaderboard_matches_hand_calculated_totals(client):
     assert "18" in event_text
 
 
+def test_predict_overview_links_to_results_and_shows_my_points(client):
+    admin = make_admin_client(client)
+    event_id, drivers, alice_id, bob_id = build_scenario(client)
+    login(client, "root", "pw")
+
+    login(client, "alice", "pw12345")
+    before = client.get(f"/predict/{event_id}")
+    assert before.status_code == 200
+    assert f'href="/leaderboard/{event_id}"' in before.text
+    assert "Not scored yet" in before.text
+
+    login(client, "root", "pw")
+    enter_qualifying_results(admin, event_id, drivers)
+
+    login(client, "alice", "pw12345")
+    after = client.get(f"/predict/{event_id}")
+    assert after.status_code == 200
+    assert "5 pts" in after.text  # alice's qualifying points from build_scenario
+
+
+def test_event_leaderboard_shows_empty_state_before_results(client):
+    event_id, drivers, alice_id, bob_id = build_scenario(client)
+
+    login(client, "alice", "pw12345")
+    response = client.get(f"/leaderboard/{event_id}")
+
+    assert response.status_code == 200
+    assert "No results entered yet" in response.text
+
+
+def test_event_leaderboard_shows_your_points_summary(client):
+    admin = make_admin_client(client)
+    event_id, drivers, alice_id, bob_id = build_scenario(client)
+    login(client, "root", "pw")
+
+    enter_qualifying_results(admin, event_id, drivers)
+
+    login(client, "alice", "pw12345")
+    response = client.get(f"/leaderboard/{event_id}")
+
+    assert response.status_code == 200
+    assert "Your points" in response.text
+    assert "5" in response.text
+
+
 def test_non_admin_cannot_enter_results(client):
     register(client, "regular")
     event_id, drivers, _, _ = build_scenario(client)

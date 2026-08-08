@@ -9,13 +9,13 @@
     {% for s in sessions %}
     <tr>
       <td>{{ s.label }}</td>
-      <td>{{ "Entered" if s.entered else "Not entered" }}</td>
+      <td><span class="badge {{ 'badge-scored' if s.entered else 'badge-warning' }}">{{ "Entered" if s.entered else "Not entered" }}</span></td>
       <td><a href="/admin/events/{{ event.id }}/results/{{ s.session_type }}">{{ "Edit" if s.entered else "Enter" }} results</a></td>
     </tr>
     {% endfor %}
     <tr>
       <td>Race bonuses</td>
-      <td>{{ "Entered" if bonuses_entered else "Not entered" }}</td>
+      <td><span class="badge {{ 'badge-scored' if bonuses_entered else 'badge-warning' }}">{{ "Entered" if bonuses_entered else "Not entered" }}</span></td>
       <td><a href="/admin/events/{{ event.id }}/results/bonuses">{{ "Edit" if bonuses_entered else "Enter" }} results</a></td>
     </tr>
   </tbody>

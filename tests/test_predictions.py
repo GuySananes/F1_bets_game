@@ -209,11 +209,8 @@ def test_qualifying_position_count_capped_at_ten_with_larger_grid(client):
     assert 'name="position_11"' not in response.text
 
 
-def test_submit_all_bonus_types(client):
-    register_and_login(client)
-    event_id, driver_ids = seed_event(client, grid_size=6)
-
-    data = {
+def bonus_data(driver_ids):
+    return {
         "first_penalty": str(driver_ids[0]),
         "first_pit": str(driver_ids[1]),
         "red_flag": "true",
@@ -223,11 +220,33 @@ def test_submit_all_bonus_types(client):
         "mvp": str(driver_ids[2]),
         "fastest_lap": str(driver_ids[3]),
     }
-    response = client.post(f"/predict/{event_id}/bonuses", data=data)
+
+
+def test_race_form_shows_bonus_questions(client):
+    register_and_login(client)
+    event_id, driver_ids = seed_event(client, grid_size=6)
+
+    response = client.get(f"/predict/{event_id}/race")
+
+    assert response.status_code == 200
+    assert "Bonuses" in response.text
+    assert 'name="red_flag"' in response.text
+
+
+def test_submit_race_predictions_and_bonuses_together(client):
+    register_and_login(client)
+    event_id, driver_ids = seed_event(client, grid_size=6)
+
+    data = {f"position_{i + 1}": str(driver_ids[i]) for i in range(6)}
+    data.update(bonus_data(driver_ids))
+    response = client.post(f"/predict/{event_id}/race", data=data)
 
     assert response.status_code == 200
     db = client.SessionLocal()
     try:
+        predictions = db.query(Prediction).filter_by(event_id=event_id, session_type="race").all()
+        assert len(predictions) == 6
+
         bonuses = db.query(BonusPrediction).filter_by(event_id=event_id).all()
         assert len(bonuses) == 8
         by_type = {b.bonus_type.value: b for b in bonuses}
@@ -238,21 +257,32 @@ def test_submit_all_bonus_types(client):
         db.close()
 
 
-def test_bonus_predictions_locked_when_race_locked(client):
+def test_missing_bonus_answer_rejects_whole_submission_including_positions(client):
+    register_and_login(client)
+    event_id, driver_ids = seed_event(client, grid_size=6)
+
+    data = {f"position_{i + 1}": str(driver_ids[i]) for i in range(6)}
+    partial_bonus = bonus_data(driver_ids)
+    del partial_bonus["red_flag"]
+    data.update(partial_bonus)
+    response = client.post(f"/predict/{event_id}/race", data=data)
+
+    assert response.status_code == 400
+    db = client.SessionLocal()
+    try:
+        assert db.query(Prediction).filter_by(event_id=event_id).count() == 0
+        assert db.query(BonusPrediction).filter_by(event_id=event_id).count() == 0
+    finally:
+        db.close()
+
+
+def test_race_predictions_and_bonuses_locked_together(client):
     register_and_login(client)
     event_id, driver_ids = seed_event(client, grid_size=6, race_start=PAST)
 
-    data = {
-        "first_penalty": str(driver_ids[0]),
-        "first_pit": str(driver_ids[1]),
-        "red_flag": "true",
-        "safety_car": "false",
-        "virtual_safety_car": "true",
-        "classified_finishers": "5",
-        "mvp": str(driver_ids[2]),
-        "fastest_lap": str(driver_ids[3]),
-    }
-    response = client.post(f"/predict/{event_id}/bonuses", data=data)
+    data = {f"position_{i + 1}": str(driver_ids[i]) for i in range(6)}
+    data.update(bonus_data(driver_ids))
+    response = client.post(f"/predict/{event_id}/race", data=data)
 
     assert response.status_code == 403
 
