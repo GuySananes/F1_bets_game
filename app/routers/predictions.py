@@ -71,9 +71,11 @@ def list_events(
         if season
         else []
     )
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request, "predict/events_list.html", {"current_user": current_user, "events": events}
     )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @router.get("/{event_id}")
@@ -101,7 +103,7 @@ def overview(
     my_logs = db.query(PointsLog).filter_by(user_id=current_user.id, event_id=event_id).all()
     my_points = sum(log.points for log in my_logs) if my_logs else None
 
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request,
         "predict/overview.html",
         {
@@ -111,6 +113,8 @@ def overview(
             "my_points": my_points,
         },
     )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 def get_existing_bonus_by_type(db: Session, current_user: User, event_id: int) -> dict:
@@ -179,7 +183,9 @@ def session_form(
         context["bonus_fields"] = BONUS_FIELDS
         context["existing_bonus_by_type"] = get_existing_bonus_by_type(db, current_user, event_id)
 
-    return templates.TemplateResponse(request, "predict/session_form.html", context)
+    response = templates.TemplateResponse(request, "predict/session_form.html", context)
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @router.post("/{event_id}/{session_type}")
@@ -239,9 +245,11 @@ async def submit_session(
         if show_bonuses:
             context["bonus_fields"] = BONUS_FIELDS
             context["existing_bonus_by_type"] = get_existing_bonus_by_type(db, current_user, event_id)
-        return templates.TemplateResponse(
+        response = templates.TemplateResponse(
             request, "predict/session_form.html", context, status_code=400,
         )
+        response.headers["Cache-Control"] = "no-store"
+        return response
 
     db.query(Prediction).filter_by(
         user_id=current_user.id, event_id=event_id, session_type=SessionType(session_type)
