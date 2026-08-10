@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.auth import hash_password
 from app.database import get_db
 from app.dependencies import require_admin, require_admin_page
 from app.models import BonusResult, BonusType, Driver, Event, EventEntry, Result, Season, SessionType, Team, User
@@ -39,6 +40,39 @@ def dashboard(
     return templates.TemplateResponse(
         request, "admin/dashboard.html", {"current_user": current_user, "season": season}
     )
+
+
+# ---------------------------------------------------------------------------
+# Users
+# ---------------------------------------------------------------------------
+
+RESET_PASSWORD_DEFAULT = "F1"
+
+
+@router.get("/users")
+def list_users(
+    request: Request,
+    current_user: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+):
+    users = db.query(User).order_by(User.username).all()
+    return templates.TemplateResponse(
+        request, "admin/users.html", {"current_user": current_user, "users": users}
+    )
+
+
+@router.post("/users/{user_id}/reset-password")
+def reset_user_password(
+    user_id: int,
+    _: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+):
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.password_hash = hash_password(RESET_PASSWORD_DEFAULT)
+    db.commit()
+    return RedirectResponse(url="/admin/users", status_code=303)
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from app.auth import verify_password
 from app.models import Driver, Event, EventEntry, Prediction, Result, Season, SessionType, Team, User
 
 FUTURE = datetime.utcnow() + timedelta(days=30)
@@ -204,6 +205,47 @@ def test_renaming_driver_mid_season_does_not_corrupt_past_event_data(client):
         assert entry.driver.name == "Brand New Name"
     finally:
         db.close()
+
+
+def test_admin_can_reset_user_password(client):
+    make_admin_client(client)
+    client.post("/auth/register", data={"username": "target", "password": "original-password"})
+    db = client.SessionLocal()
+    try:
+        target_id = db.query(User).filter_by(username="target").first().id
+    finally:
+        db.close()
+
+    # switch back to the admin session before performing the reset
+    client.post("/auth/login", data={"username": "root", "password": "pw"})
+
+    response = client.post(f"/admin/users/{target_id}/reset-password")
+
+    assert response.status_code == 200
+    db = client.SessionLocal()
+    try:
+        target = db.get(User, target_id)
+        assert verify_password("F1", target.password_hash)
+        assert not verify_password("original-password", target.password_hash)
+    finally:
+        db.close()
+
+    client.cookies.clear()
+    login_response = client.post("/auth/login", data={"username": "target", "password": "F1"})
+    assert login_response.status_code == 200
+
+
+def test_non_admin_cannot_reset_user_password(client):
+    client.post("/auth/register", data={"username": "regular", "password": "pw"})
+    db = client.SessionLocal()
+    try:
+        target_id = db.query(User).filter_by(username="regular").first().id
+    finally:
+        db.close()
+
+    response = client.post(f"/admin/users/{target_id}/reset-password", follow_redirects=False)
+
+    assert response.status_code == 403
 
 
 def test_non_admin_user_redirected_from_admin_pages(client):

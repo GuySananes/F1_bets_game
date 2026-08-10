@@ -23,7 +23,14 @@ def index(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/login")
-def login_page(request: Request, next: str = "/admin", error: Optional[str] = None):
+def login_page(request: Request, next: str = "/", error: Optional[str] = None):
     return templates.TemplateResponse(
         request, "login.html", {"next": next, "error": error}
+    )
+
+
+@router.get("/register")
+def register_page(request: Request, next: str = "/", error: Optional[str] = None):
+    return templates.TemplateResponse(
+        request, "register.html", {"next": next, "error": error}
     )
