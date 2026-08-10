@@ -3,9 +3,12 @@
 {% block content %}
 <p><a href="/admin">&larr; Admin</a></p>
 <h2>Events — {{ season.name }}</h2>
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
 <table>
   <thead>
-    <tr><th>Round</th><th>Name</th><th>Sprint?</th><th>Grid size</th><th>Qualifying locks</th><th>Sprint locks</th><th>Race locks</th><th></th></tr>
+    <tr><th>Round</th><th>Name</th><th>Sprint?</th><th>Grid size</th><th>Qualifying locks</th><th>Sprint locks</th><th>Race locks</th><th></th><th></th></tr>
   </thead>
   <tbody>
     {% for event in events %}
@@ -21,15 +24,26 @@
         <a href="/admin/events/{{ event.id }}/entries">Set entries</a> ·
         <a href="/admin/events/{{ event.id }}/results">Results</a>
       </td>
+      <td>
+        <form class="inline" method="post" action="/admin/events/{{ event.id }}/delete" onsubmit="return confirm('Delete event {{ event.name }}?');">
+          <button type="submit">Delete</button>
+        </form>
+      </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 
+<h3>Season settings</h3>
+<form class="inline" method="post" action="/admin/season/next-round-number">
+  <label>Next round number <input type="number" name="next_round_number" min="1" value="{{ season.next_round_number }}" required></label>
+  <button type="submit">Save</button>
+</form>
+<p class="muted">Sets the round number the next created event will get — adjust this when starting a season mid-year.</p>
+
 <h3>New event</h3>
-<p class="muted">Predictions for each session lock automatically once its start time passes.</p>
+<p class="muted">Predictions for each session lock automatically once its start time passes. This event will be round {{ season.next_round_number }}.</p>
 <form method="post" action="/admin/events">
-  <label>Round number <input type="number" name="round_number" min="1" required></label>
   <label>Name <input type="text" name="name" required></label>
   <label><input type="checkbox" name="has_sprint" id="has_sprint"> Has sprint</label>
   <label>Grid size <input type="number" name="grid_size" min="1" required></label>

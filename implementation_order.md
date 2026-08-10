@@ -81,7 +81,17 @@ Read `f1_prediction_league_spec.md` in full before starting Phase 0. It is the s
 
 ---
 
-## Phase 8 — Deploy
+## Phase 8 — Admin & UX fixes
+- Roster admin: add "create" routes for teams and drivers (in addition to existing rename), and "delete" routes for teams, drivers, and events. Deletes must be blocked (with a clear error) when dependent predictions/results/points_log/bonus rows exist.
+- Event creation: drop the manual round-number field from the create-event form. Auto-assign it from a new `Season.next_round_number` counter, incremented on each event creation. Add an admin control to edit `next_round_number` directly, so a season starting mid-year can set its first round number correctly.
+- Nav cleanup: the top-nav "Leaderboard" link and bottom-nav "Standings" link both point at the same `/leaderboard` route — rename both to "Standings" for consistency.
+- Add a self-service `/settings` page (any logged-in user, including admins) to change username and/or password, verified against the current password. Reuse the existing `hash_password`/`verify_password` helpers from `app/auth.py`.
+
+**Checkpoint:** admin can add and delete a team/driver/event (and sees a clear block message when deletion isn't safe), a new event's round number is auto-filled correctly after adjusting the season's starting round, both nav links read "Standings", and a non-admin user can change their own password from `/settings`.
+
+---
+
+## Phase 9 — Deploy
 - Push to GitHub.
 - Create Supabase project, run migrations against it.
 - Deploy to Render as a web service, environment variables set from `.env.example`.

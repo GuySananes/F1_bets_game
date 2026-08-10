@@ -261,3 +261,229 @@ def test_unauthenticated_visitor_redirected_to_login(client):
 
     assert response.status_code == 303
     assert response.headers["location"].startswith("/login")
+
+
+def test_admin_can_create_team_through_ui(client):
+    make_admin_client(client)
+    seed_minimal_roster(client)
+
+    response = client.post("/admin/teams", data={"name": "New Team"})
+
+    assert response.status_code == 200
+    db = client.SessionLocal()
+    try:
+        team = db.query(Team).filter_by(name="New Team").first()
+        assert team is not None
+    finally:
+        db.close()
+
+
+def test_admin_can_delete_team_with_no_drivers(client):
+    make_admin_client(client)
+    seed_minimal_roster(client)
+    db = client.SessionLocal()
+    try:
+        empty_team = Team(season_id=db.query(Season).first().id, name="Empty Team")
+        db.add(empty_team)
+        db.commit()
+        empty_team_id = empty_team.id
+    finally:
+        db.close()
+
+    response = client.post(f"/admin/teams/{empty_team_id}/delete", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert "error" not in response.headers["location"]
+    db = client.SessionLocal()
+    try:
+        assert db.get(Team, empty_team_id) is None
+    finally:
+        db.close()
+
+
+def test_admin_cannot_delete_team_with_drivers(client):
+    make_admin_client(client)
+    _, team_id, _, _ = seed_minimal_roster(client)
+
+    response = client.post(f"/admin/teams/{team_id}/delete", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert "error=" in response.headers["location"]
+    db = client.SessionLocal()
+    try:
+        assert db.get(Team, team_id) is not None
+    finally:
+        db.close()
+
+
+def test_admin_can_create_driver_through_ui(client):
+    make_admin_client(client)
+    _, team_id, _, _ = seed_minimal_roster(client)
+
+    response = client.post(
+        "/admin/drivers",
+        data={"name": "Brand New Driver", "team_id": team_id, "active": "on"},
+    )
+
+    assert response.status_code == 200
+    db = client.SessionLocal()
+    try:
+        driver = db.query(Driver).filter_by(name="Brand New Driver").first()
+        assert driver is not None
+        assert driver.team_id == team_id
+        assert driver.is_reserve is False
+        assert driver.active is True
+    finally:
+        db.close()
+
+
+def test_admin_can_delete_driver_with_no_dependents(client):
+    make_admin_client(client)
+    _, _, driver_id, unused_driver_id = seed_minimal_roster(client)
+
+    response = client.post(f"/admin/drivers/{unused_driver_id}/delete", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert "error" not in response.headers["location"]
+    db = client.SessionLocal()
+    try:
+        assert db.get(Driver, unused_driver_id) is None
+    finally:
+        db.close()
+
+
+def test_admin_cannot_delete_driver_with_predictions(client):
+    make_admin_client(client)
+    season_id, _, driver_id, _ = seed_minimal_roster(client)
+
+    db = client.SessionLocal()
+    try:
+        event = Event(
+            season_id=season_id, round_number=1, name="GP", has_sprint=False, grid_size=1,
+            qualifying_start_time=FUTURE, race_start_time=FUTURE,
+        )
+        db.add(event)
+        db.flush()
+        db.add(
+            Prediction(
+                user_id=1, event_id=event.id, session_type=SessionType.race,
+                predicted_position=1, driver_id=driver_id,
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.post(f"/admin/drivers/{driver_id}/delete", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert "error=" in response.headers["location"]
+    db = client.SessionLocal()
+    try:
+        assert db.get(Driver, driver_id) is not None
+    finally:
+        db.close()
+
+
+def test_new_events_get_auto_assigned_incrementing_round_numbers(client):
+    make_admin_client(client)
+    seed_minimal_roster(client)
+
+    payload = {
+        "name": "First Event",
+        "grid_size": 2,
+        "qualifying_start_time": "2099-01-01T10:00",
+        "race_start_time": "2099-01-02T13:00",
+    }
+    client.post("/admin/events", data=payload)
+    client.post("/admin/events", data={**payload, "name": "Second Event"})
+
+    db = client.SessionLocal()
+    try:
+        first = db.query(Event).filter_by(name="First Event").first()
+        second = db.query(Event).filter_by(name="Second Event").first()
+        assert first.round_number == 1
+        assert second.round_number == 2
+    finally:
+        db.close()
+
+
+def test_admin_can_override_next_round_number_for_mid_season_start(client):
+    make_admin_client(client)
+    seed_minimal_roster(client)
+
+    client.post("/admin/season/next-round-number", data={"next_round_number": 14})
+    client.post(
+        "/admin/events",
+        data={
+            "name": "Mid-season Event",
+            "grid_size": 2,
+            "qualifying_start_time": "2099-01-01T10:00",
+            "race_start_time": "2099-01-02T13:00",
+        },
+    )
+
+    db = client.SessionLocal()
+    try:
+        event = db.query(Event).filter_by(name="Mid-season Event").first()
+        assert event.round_number == 14
+        season = db.query(Season).first()
+        assert season.next_round_number == 15
+    finally:
+        db.close()
+
+
+def test_admin_can_delete_event_with_no_dependents(client):
+    make_admin_client(client)
+    season_id, _, _, _ = seed_minimal_roster(client)
+    db = client.SessionLocal()
+    try:
+        event = Event(
+            season_id=season_id, round_number=1, name="Unused GP", has_sprint=False, grid_size=1,
+            qualifying_start_time=FUTURE, race_start_time=FUTURE,
+        )
+        db.add(event)
+        db.commit()
+        event_id = event.id
+    finally:
+        db.close()
+
+    response = client.post(f"/admin/events/{event_id}/delete", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert "error" not in response.headers["location"]
+    db = client.SessionLocal()
+    try:
+        assert db.get(Event, event_id) is None
+    finally:
+        db.close()
+
+
+def test_admin_cannot_delete_event_with_results(client):
+    make_admin_client(client)
+    season_id, _, driver_id, _ = seed_minimal_roster(client)
+    db = client.SessionLocal()
+    try:
+        event = Event(
+            season_id=season_id, round_number=1, name="Scored GP", has_sprint=False, grid_size=1,
+            qualifying_start_time=FUTURE, race_start_time=FUTURE,
+        )
+        db.add(event)
+        db.flush()
+        db.add(
+            Result(event_id=event.id, session_type=SessionType.race, actual_position=1, driver_id=driver_id)
+        )
+        db.commit()
+        event_id = event.id
+    finally:
+        db.close()
+
+    response = client.post(f"/admin/events/{event_id}/delete", follow_redirects=False)
+
+    assert response.status_code == 303
+    assert "error=" in response.headers["location"]
+    db = client.SessionLocal()
+    try:
+        assert db.get(Event, event_id) is not None
+    finally:
+        db.close()

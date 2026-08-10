@@ -112,6 +112,11 @@ p {
   font-weight: 600;
 }
 
+.success {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
 .muted {
   color: var(--color-text-muted);
   font-size: 0.9em;

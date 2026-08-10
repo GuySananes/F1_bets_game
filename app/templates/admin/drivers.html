@@ -3,15 +3,18 @@
 {% block content %}
 <p><a href="/admin">&larr; Admin</a></p>
 <h2>Drivers — {{ season.name }}</h2>
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
 <table>
   <thead>
-    <tr><th>Team</th><th>Name</th><th>Reserve</th><th>Active</th><th></th></tr>
+    <tr><th>Team</th><th>Name</th><th>Reserve</th><th>Active</th><th></th><th></th></tr>
   </thead>
   <tbody>
     {% for driver in drivers %}
     <tr>
       <td>{{ driver.team.name }}</td>
-      <td colspan="4">
+      <td colspan="3">
         <form class="inline" method="post" action="/admin/drivers/{{ driver.id }}">
           <input type="text" name="name" value="{{ driver.name }}" required>
           <label><input type="checkbox" name="is_reserve" {% if driver.is_reserve %}checked{% endif %}> Reserve</label>
@@ -19,8 +22,28 @@
           <button type="submit">Save</button>
         </form>
       </td>
+      <td>
+        <form class="inline" method="post" action="/admin/drivers/{{ driver.id }}/delete" onsubmit="return confirm('Delete driver {{ driver.name }}?');">
+          <button type="submit">Delete</button>
+        </form>
+      </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+
+<h3>New driver</h3>
+<form method="post" action="/admin/drivers">
+  <label>Name <input type="text" name="name" required></label>
+  <label>Team
+    <select name="team_id" required>
+      {% for team in teams %}
+      <option value="{{ team.id }}">{{ team.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label><input type="checkbox" name="is_reserve"> Reserve</label>
+  <label><input type="checkbox" name="active" checked> Active</label>
+  <button type="submit">Add driver</button>
+</form>
 {% endblock %}

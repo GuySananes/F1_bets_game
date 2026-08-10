@@ -8,7 +8,21 @@ from sqlalchemy.orm import Session
 from app.auth import hash_password
 from app.database import get_db
 from app.dependencies import require_admin, require_admin_page
-from app.models import BonusResult, BonusType, Driver, Event, EventEntry, Result, Season, SessionType, Team, User
+from app.models import (
+    BonusPrediction,
+    BonusResult,
+    BonusType,
+    Driver,
+    Event,
+    EventEntry,
+    PointsLog,
+    Prediction,
+    Result,
+    Season,
+    SessionType,
+    Team,
+    User,
+)
 from app.points import recompute_session_points
 from app.prediction_constants import BONUS_FIELDS, SESSION_LABELS
 from app.routers.predictions import get_entered_drivers
@@ -84,12 +98,27 @@ def list_teams(
     request: Request,
     current_user: User = Depends(require_admin_page),
     db: Session = Depends(get_db),
+    error: Optional[str] = None,
 ):
     season = get_current_season(db)
     teams = db.query(Team).filter_by(season_id=season.id).order_by(Team.name).all()
     return templates.TemplateResponse(
-        request, "admin/teams.html", {"current_user": current_user, "season": season, "teams": teams}
+        request,
+        "admin/teams.html",
+        {"current_user": current_user, "season": season, "teams": teams, "error": error},
     )
+
+
+@router.post("/teams")
+def create_team(
+    name: str = Form(...),
+    _: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+):
+    season = get_current_season(db)
+    db.add(Team(season_id=season.id, name=name))
+    db.commit()
+    return RedirectResponse(url="/admin/teams", status_code=303)
 
 
 @router.post("/teams/{team_id}")
@@ -107,6 +136,27 @@ def update_team(
     return RedirectResponse(url="/admin/teams", status_code=303)
 
 
+@router.post("/teams/{team_id}/delete")
+def delete_team(
+    team_id: int,
+    _: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+):
+    team = db.get(Team, team_id)
+    if team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    if db.query(Driver).filter_by(team_id=team_id).first() is not None:
+        return RedirectResponse(
+            url="/admin/teams?error=Cannot+delete+a+team+with+drivers+on+its+roster.+Remove+its+drivers+first.",
+            status_code=303,
+        )
+
+    db.delete(team)
+    db.commit()
+    return RedirectResponse(url="/admin/teams", status_code=303)
+
+
 # ---------------------------------------------------------------------------
 # Drivers
 # ---------------------------------------------------------------------------
@@ -116,6 +166,7 @@ def list_drivers(
     request: Request,
     current_user: User = Depends(require_admin_page),
     db: Session = Depends(get_db),
+    error: Optional[str] = None,
 ):
     season = get_current_season(db)
     drivers = (
@@ -125,9 +176,37 @@ def list_drivers(
         .order_by(Team.name, Driver.name)
         .all()
     )
+    teams = db.query(Team).filter_by(season_id=season.id).order_by(Team.name).all()
     return templates.TemplateResponse(
-        request, "admin/drivers.html", {"current_user": current_user, "season": season, "drivers": drivers}
+        request,
+        "admin/drivers.html",
+        {"current_user": current_user, "season": season, "drivers": drivers, "teams": teams, "error": error},
     )
+
+
+@router.post("/drivers")
+def create_driver(
+    name: str = Form(...),
+    team_id: int = Form(...),
+    is_reserve: Optional[str] = Form(None),
+    active: Optional[str] = Form(None),
+    _: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+):
+    team = db.get(Team, team_id)
+    if team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+    db.add(
+        Driver(
+            season_id=team.season_id,
+            team_id=team_id,
+            name=name,
+            is_reserve=bool(is_reserve),
+            active=bool(active) if active is not None else True,
+        )
+    )
+    db.commit()
+    return RedirectResponse(url="/admin/drivers", status_code=303)
 
 
 @router.post("/drivers/{driver_id}")
@@ -149,6 +228,37 @@ def update_driver(
     return RedirectResponse(url="/admin/drivers", status_code=303)
 
 
+@router.post("/drivers/{driver_id}/delete")
+def delete_driver(
+    driver_id: int,
+    _: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+):
+    driver = db.get(Driver, driver_id)
+    if driver is None:
+        raise HTTPException(status_code=404, detail="Driver not found")
+
+    has_dependents = any(
+        [
+            db.query(Prediction).filter_by(driver_id=driver_id).first() is not None,
+            db.query(Result).filter_by(driver_id=driver_id).first() is not None,
+            db.query(BonusPrediction).filter_by(driver_id=driver_id).first() is not None,
+            db.query(BonusResult).filter_by(driver_id=driver_id).first() is not None,
+            db.query(EventEntry).filter_by(driver_id=driver_id).first() is not None,
+            db.query(EventEntry).filter_by(substituted_for_driver_id=driver_id).first() is not None,
+        ]
+    )
+    if has_dependents:
+        return RedirectResponse(
+            url="/admin/drivers?error=Cannot+delete+a+driver+with+predictions%2C+results%2C+or+event+entries+on+record.",
+            status_code=303,
+        )
+
+    db.delete(driver)
+    db.commit()
+    return RedirectResponse(url="/admin/drivers", status_code=303)
+
+
 # ---------------------------------------------------------------------------
 # Events
 # ---------------------------------------------------------------------------
@@ -158,17 +268,19 @@ def list_events(
     request: Request,
     current_user: User = Depends(require_admin_page),
     db: Session = Depends(get_db),
+    error: Optional[str] = None,
 ):
     season = get_current_season(db)
     events = db.query(Event).filter_by(season_id=season.id).order_by(Event.round_number).all()
     return templates.TemplateResponse(
-        request, "admin/events.html", {"current_user": current_user, "season": season, "events": events}
+        request,
+        "admin/events.html",
+        {"current_user": current_user, "season": season, "events": events, "error": error},
     )
 
 
 @router.post("/events")
 def create_event(
-    round_number: int = Form(...),
     name: str = Form(...),
     has_sprint: Optional[str] = Form(None),
     grid_size: int = Form(...),
@@ -182,7 +294,7 @@ def create_event(
     is_sprint = bool(has_sprint)
     event = Event(
         season_id=season.id,
-        round_number=round_number,
+        round_number=season.next_round_number,
         name=name,
         has_sprint=is_sprint,
         grid_size=grid_size,
@@ -190,7 +302,50 @@ def create_event(
         race_start_time=datetime.fromisoformat(race_start_time),
         sprint_start_time=datetime.fromisoformat(sprint_start_time) if (is_sprint and sprint_start_time) else None,
     )
+    season.next_round_number += 1
     db.add(event)
+    db.commit()
+    return RedirectResponse(url="/admin/events", status_code=303)
+
+
+@router.post("/season/next-round-number")
+def set_next_round_number(
+    next_round_number: int = Form(...),
+    _: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+):
+    season = get_current_season(db)
+    season.next_round_number = next_round_number
+    db.commit()
+    return RedirectResponse(url="/admin/events", status_code=303)
+
+
+@router.post("/events/{event_id}/delete")
+def delete_event(
+    event_id: int,
+    _: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+):
+    event = db.get(Event, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    has_dependents = any(
+        [
+            db.query(Prediction).filter_by(event_id=event_id).first() is not None,
+            db.query(Result).filter_by(event_id=event_id).first() is not None,
+            db.query(BonusPrediction).filter_by(event_id=event_id).first() is not None,
+            db.query(BonusResult).filter_by(event_id=event_id).first() is not None,
+            db.query(PointsLog).filter_by(event_id=event_id).first() is not None,
+        ]
+    )
+    if has_dependents:
+        return RedirectResponse(
+            url="/admin/events?error=Cannot+delete+an+event+with+predictions%2C+results%2C+or+points+on+record.",
+            status_code=303,
+        )
+
+    db.delete(event)
     db.commit()
     return RedirectResponse(url="/admin/events", status_code=303)
 

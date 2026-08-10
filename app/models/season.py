@@ -13,6 +13,7 @@ class Season(Base):
     year: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     default_grid_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    next_round_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 
     teams: Mapped[List["Team"]] = relationship(back_populates="season", cascade="all, delete-orphan")
     drivers: Mapped[List["Driver"]] = relationship(back_populates="season", cascade="all, delete-orphan")

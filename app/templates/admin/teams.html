@@ -3,6 +3,9 @@
 {% block content %}
 <p><a href="/admin">&larr; Admin</a></p>
 <h2>Teams — {{ season.name }}</h2>
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
 <table>
   <thead>
     <tr><th>Name</th><th></th></tr>
@@ -16,8 +19,19 @@
           <button type="submit">Save</button>
         </form>
       </td>
+      <td>
+        <form class="inline" method="post" action="/admin/teams/{{ team.id }}/delete" onsubmit="return confirm('Delete team {{ team.name }}?');">
+          <button type="submit">Delete</button>
+        </form>
+      </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+
+<h3>New team</h3>
+<form method="post" action="/admin/teams">
+  <label>Name <input type="text" name="name" required></label>
+  <button type="submit">Add team</button>
+</form>
 {% endblock %}

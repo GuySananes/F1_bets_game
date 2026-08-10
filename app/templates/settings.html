@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Settings — F1 Prediction League{% endblock %}
+{% block content %}
+<h2>Settings</h2>
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
+{% if success %}
+<p class="success">{{ success }}</p>
+{% endif %}
+<form method="post" action="/settings">
+  <label>Current username <input type="text" value="{{ current_user.username }}" disabled></label>
+  <label>Current password <input type="password" name="current_password" required></label>
+  <label>New username <input type="text" name="new_username" placeholder="Leave blank to keep current"></label>
+  <label>New password <input type="password" name="new_password" placeholder="Leave blank to keep current"></label>
+  <button type="submit">Save changes</button>
+</form>
+{% endblock %}

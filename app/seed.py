@@ -91,6 +91,7 @@ def seed_season(db):
         race_start_time=race_start,
     )
     db.add(event)
+    season.next_round_number = event.round_number + 1
     db.flush()
 
     primary_drivers = [d for d in drivers if not d.is_reserve]

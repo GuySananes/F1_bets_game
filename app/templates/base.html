@@ -31,11 +31,11 @@
     {% if current_user %}
     <ul class="top-nav">
       <li><a href="/predict" class="{{ 'active' if path.startswith('/predict') }}">Predictions</a></li>
-      <li><a href="/leaderboard" class="{{ 'active' if path.startswith('/leaderboard') }}">Leaderboard</a></li>
+      <li><a href="/leaderboard" class="{{ 'active' if path.startswith('/leaderboard') }}">Standings</a></li>
       {% if current_user.is_admin %}<li><a href="/admin" class="{{ 'active' if path.startswith('/admin') }}">Admin</a></li>{% endif %}
     </ul>
     <div class="header-user">
-      <span>{{ current_user.username }}</span>
+      <a href="/settings" class="{{ 'active' if path.startswith('/settings') }}">{{ current_user.username }}</a>
       <form class="inline" method="post" action="/auth/logout"><button type="submit" class="btn-ghost">Log out</button></form>
     </div>
     {% endif %}
@@ -59,6 +59,10 @@
       Admin
     </a>
     {% endif %}
+    <a href="/settings" class="{{ 'active' if path.startswith('/settings') }}">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </a>
     <form class="inline" method="post" action="/auth/logout">
       <button type="submit">
         <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>

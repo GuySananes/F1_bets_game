@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.dependencies import NeedsLogin
-from app.routers import admin, auth, leaderboard, pages, predictions
+from app.routers import admin, auth, leaderboard, pages, predictions, settings
 
 app = FastAPI(title="F1 Prediction League")
 
@@ -14,6 +14,7 @@ app.include_router(admin.router)
 app.include_router(pages.router)
 app.include_router(predictions.router)
 app.include_router(leaderboard.router)
+app.include_router(settings.router)
 
 
 @app.exception_handler(NeedsLogin)

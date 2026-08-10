@@ -48,12 +48,14 @@ For each position you predicted:
 - Season-specific: 11 teams this season (10 last season) — team count and grid size vary by year, so nothing is hardcoded.
 - 2 primary drivers per team, plus one or more reserve/spare drivers who may substitute in for a given race weekend.
 - Default team/driver names are seeded at season start but must be editable by an admin at any time (renames, roster corrections).
+- Admins can also add and delete teams, drivers, and events from the admin UI. A delete is blocked (with an explanation) if the row has dependent data — a team with drivers, a driver with predictions/results/entries, or an event with predictions/results/bonus data/points — to avoid orphaning or silently destroying scored history.
 - Each race weekend has its own actual "entry list" (who's really racing that week), separate from the season roster — this is what substitutions get recorded against, and what predictions/results are scored against, so a one-off substitute doesn't affect the permanent roster.
 
 ### Users
 - Self-registration: username + password.
 - Can join at any point in the season, starting at 0 points (points are always computed from logged history, never a manually-reset counter).
 - Admin flag on at least one account for roster/name management.
+- Self-service settings page (`/settings`) lets any user, including admins, change their own username and/or password after confirming their current password. Admins can still force-reset another user's password to a default value for account-recovery cases.
 
 ### Prediction Lock Time
 - Each session (qualifying, sprint, race) has its own start time, set by the admin when creating the event.
@@ -66,7 +68,8 @@ For each position you predicted:
 ## Database Schema (draft)
 
 **seasons**
-`id, year, name, default_grid_size`
+`id, year, name, default_grid_size, next_round_number`
+`next_round_number` is the round number the next created event will be auto-assigned; it increments on event creation and is directly editable by an admin, so a season that starts mid-year can set its first event to the correct round instead of always starting at 1.
 
 **teams**
 `id, season_id, name`
