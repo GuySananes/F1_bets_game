@@ -49,7 +49,11 @@ def position_count_for(event: Event, session_type: str, entered_count: int) -> i
         # spec rule is always "top 10" — capped at how many cars are actually
         # entered so small fixtures (fewer than 10 cars) don't ask for the impossible
         return min(10, entered_count)
-    return event.grid_size
+    # grid_size is admin-set and can drift from the actual entered-driver count
+    # (e.g. after a roster change) — cap it so the form never asks for more
+    # positions than there are drivers to fill them, which would make it
+    # impossible to ever submit a complete prediction.
+    return min(event.grid_size, entered_count)
 
 
 def build_ranking(
@@ -181,6 +185,7 @@ def session_form(
     request: Request,
     current_user: User = Depends(require_login_page),
     db: Session = Depends(get_db),
+    saved: Optional[bool] = False,
 ):
     event = get_event_or_404(db, event_id)
     validate_session_type(event, session_type)
@@ -211,6 +216,7 @@ def session_form(
         "pool_drivers": pool_drivers,
         "has_pool": len(entered_drivers) > position_count,
         "error": None,
+        "saved": saved,
         "show_bonuses": show_bonuses,
     }
     if show_bonuses:
@@ -320,4 +326,4 @@ async def submit_session(
 
     db.commit()
 
-    return RedirectResponse(url=f"/predict/{event_id}", status_code=303)
+    return RedirectResponse(url=f"/predict/{event_id}/{session_type}?saved=1", status_code=303)

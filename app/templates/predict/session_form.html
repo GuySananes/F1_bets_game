@@ -8,6 +8,10 @@
 <p class="error">{{ error }}</p>
 {% endif %}
 
+{% if saved %}
+<div class="toast toast-success" id="save-toast" role="status">Predictions saved!</div>
+{% endif %}
+
 {% if locked %}
 <p><span class="badge badge-locked">Locked</span> Predictions for this session are locked.</p>
 <div class="position-list">
@@ -141,5 +145,18 @@
   <button type="submit" class="btn-block">Save predictions</button>
 </form>
 <script src="/static/predict.js"></script>
+{% endif %}
+
+{% if saved %}
+<script>
+  (function () {
+    var toast = document.getElementById("save-toast");
+    if (!toast) return;
+    setTimeout(function () { toast.classList.add("toast-hide"); }, 2200);
+    if (window.history.replaceState) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  })();
+</script>
 {% endif %}
 {% endblock %}

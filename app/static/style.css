@@ -659,6 +659,43 @@ a.card:active {
   color: var(--color-warning);
 }
 
+/* ---------- Toasts ---------- */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-5, 24px);
+  transform: translate(-50%, 0);
+  z-index: 100;
+  padding: 0.75em 1.25em;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: toast-pop 0.2s ease-out;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast-success {
+  background: var(--color-success);
+  color: #06331a;
+}
+
+.toast-hide {
+  opacity: 0;
+  transform: translate(-50%, 8px);
+}
+
+@keyframes toast-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
 /* ---------- Tables ---------- */
 
 table {
