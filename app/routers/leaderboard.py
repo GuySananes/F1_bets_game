@@ -71,7 +71,6 @@ def event_leaderboard(
     driver_names = {d.id: d.name for d in db.query(Driver).filter_by(season_id=event.season_id).all()}
 
     my_row = next((row for row in rows if row["user"].id == current_user.id), None)
-    detail_rows = sorted(rows, key=lambda row: row["user"].id != current_user.id)
 
     return templates.TemplateResponse(
         request,
@@ -80,7 +79,6 @@ def event_leaderboard(
             "current_user": current_user,
             "event": event,
             "rows": rows,
-            "detail_rows": detail_rows,
             "my_row": my_row,
             "sessions": sessions,
             "driver_names": driver_names,

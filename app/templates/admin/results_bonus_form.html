@@ -10,27 +10,33 @@
   {% for bonus_type, label, kind in bonus_fields %}
   {% set existing = existing_by_type.get(bonus_type) %}
   <p>
-    <label>{{ label }}
-      {% if kind == "driver" %}
-        <select name="{{ bonus_type }}" required>
-          <option value="">—</option>
-          {% for driver in entered_drivers %}
-          <option value="{{ driver.id }}" {% if existing and existing.driver_id == driver.id %}selected{% endif %}>
-            {{ driver.name }} ({{ driver.team.name }})
-          </option>
-          {% endfor %}
-        </select>
-      {% elif kind == "bool" %}
-        <select name="{{ bonus_type }}" required>
-          <option value="">—</option>
-          <option value="true" {% if existing and existing.bool_value == True %}selected{% endif %}>Yes</option>
-          <option value="false" {% if existing and existing.bool_value == False %}selected{% endif %}>No</option>
-        </select>
-      {% elif kind == "int" %}
-        <input type="number" name="{{ bonus_type }}" min="0"
-               value="{{ existing.int_value if existing and existing.int_value is not none else '' }}" required>
-      {% endif %}
-    </label>
+    {% if kind == "bool" %}
+      <span class="bonus-label">{{ label }}</span>
+      <label class="flag-toggle">
+        <input type="checkbox" class="flag-toggle-input" name="{{ bonus_type }}" value="true"
+               {% if existing and existing.bool_value %}checked{% endif %}>
+        <input type="hidden" name="{{ bonus_type }}" value="false">
+        <span class="flag-toggle-switch" aria-hidden="true"></span>
+        <span class="flag-toggle-text flag-toggle-text-off">No</span>
+        <span class="flag-toggle-text flag-toggle-text-on">Yes</span>
+      </label>
+    {% else %}
+      <label>{{ label }}
+        {% if kind == "driver" %}
+          <select name="{{ bonus_type }}" required>
+            <option value="">—</option>
+            {% for driver in entered_drivers %}
+            <option value="{{ driver.id }}" {% if existing and existing.driver_id == driver.id %}selected{% endif %}>
+              {{ driver.name }} ({{ driver.team.name }})
+            </option>
+            {% endfor %}
+          </select>
+        {% elif kind == "int" %}
+          <input type="number" name="{{ bonus_type }}" min="0"
+                 value="{{ existing.int_value if existing and existing.int_value is not none else (entered_drivers|length if bonus_type == 'classified_finishers' else '') }}" required>
+        {% endif %}
+      </label>
+    {% endif %}
   </p>
   {% endfor %}
   <button type="submit">Save bonus results</button>

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ event.name }} — Leaderboard{% endblock %}
 {% block content %}
-<p><a href="/leaderboard">&larr; Season leaderboard</a></p>
+<p><a href="/predict/{{ event.id }}">&larr; {{ event.name }}</a></p>
 <h2>{{ event.name }} — breakdown</h2>
 
 {% if not rows %}
@@ -37,11 +37,11 @@
   </tbody>
 </table>
 
-{% for row in detail_rows %}
-<h3>{{ row.user.username }}{% if current_user and row.user.id == current_user.id %} <span class="muted">(you)</span>{% endif %} — detail</h3>
+{% if my_row %}
+<h3>Your detail</h3>
 {% for s in sessions %}
-{% if s in row.by_session %}
-{% set log = row.by_session[s] %}
+{% if s in my_row.by_session %}
+{% set log = my_row.by_session[s] %}
 <details>
   <summary>{{ s|capitalize }} ({{ log.points }} pts)</summary>
   <table>
@@ -74,7 +74,7 @@
 </details>
 {% endif %}
 {% endfor %}
-{% endfor %}
+{% endif %}
 
 {% endif %}
 {% endblock %}

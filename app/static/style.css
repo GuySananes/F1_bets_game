@@ -618,6 +618,89 @@ a.card:active {
   margin-bottom: 0;
 }
 
+.bonus-label {
+  display: block;
+  margin-bottom: var(--space-3);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+/* Green-flag / red-flag on-off switch (bool bonus questions) */
+.flag-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: 0;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.flag-toggle-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+.flag-toggle-switch {
+  position: relative;
+  flex: none;
+  width: 3.25rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: var(--color-red);
+  border: 1px solid var(--color-border);
+  transition: background-color 0.15s ease;
+}
+
+.flag-toggle-switch::before {
+  content: "\1F3C1";
+  position: absolute;
+  top: 50%;
+  left: 0.2rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  line-height: 1;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transform: translateY(-50%);
+  transition: left 0.15s ease;
+}
+
+.flag-toggle-input:checked ~ .flag-toggle-switch {
+  background: var(--color-success);
+}
+
+.flag-toggle-input:checked ~ .flag-toggle-switch::before {
+  left: calc(100% - 1.55rem);
+}
+
+.flag-toggle-input:focus-visible ~ .flag-toggle-switch {
+  outline: 2px solid var(--color-red-light);
+  outline-offset: 2px;
+}
+
+.flag-toggle-text-on {
+  display: none;
+}
+
+.flag-toggle-input:checked ~ .flag-toggle-text-on {
+  display: inline;
+}
+
+.flag-toggle-input:checked ~ .flag-toggle-text-off {
+  display: none;
+}
+
 /* Full-width primary action button */
 .btn-block {
   display: flex;
