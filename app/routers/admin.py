@@ -423,6 +423,49 @@ async def update_event_entries(
 
 
 # ---------------------------------------------------------------------------
+# Season reset
+# ---------------------------------------------------------------------------
+
+@router.get("/season/reset")
+def season_reset_form(
+    request: Request,
+    current_user: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+):
+    season = get_current_season(db)
+    event_count = db.query(Event).filter_by(season_id=season.id).count()
+    return templates.TemplateResponse(
+        request,
+        "admin/season_reset.html",
+        {"current_user": current_user, "season": season, "event_count": event_count},
+    )
+
+
+@router.post("/season/reset")
+def reset_season(
+    _: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+):
+    """Wipes all race data (events, entries, predictions, results, bonuses, points)
+    for the current season but keeps its teams and drivers as-is."""
+    season = get_current_season(db)
+    event_ids = [e.id for e in db.query(Event).filter_by(season_id=season.id).all()]
+
+    if event_ids:
+        db.query(PointsLog).filter(PointsLog.event_id.in_(event_ids)).delete(synchronize_session=False)
+        db.query(BonusResult).filter(BonusResult.event_id.in_(event_ids)).delete(synchronize_session=False)
+        db.query(BonusPrediction).filter(BonusPrediction.event_id.in_(event_ids)).delete(synchronize_session=False)
+        db.query(Result).filter(Result.event_id.in_(event_ids)).delete(synchronize_session=False)
+        db.query(Prediction).filter(Prediction.event_id.in_(event_ids)).delete(synchronize_session=False)
+        db.query(EventEntry).filter(EventEntry.event_id.in_(event_ids)).delete(synchronize_session=False)
+        db.query(Event).filter(Event.id.in_(event_ids)).delete(synchronize_session=False)
+
+    season.next_round_number = 1
+    db.commit()
+    return RedirectResponse(url="/admin/events", status_code=303)
+
+
+# ---------------------------------------------------------------------------
 # Results entry
 # ---------------------------------------------------------------------------
 

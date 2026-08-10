@@ -76,6 +76,8 @@ For each position you predicted:
 `id, year, name, default_grid_size, next_round_number`
 `next_round_number` is the round number the next created event will be auto-assigned; it increments on event creation and is directly editable by an admin, so a season that starts mid-year can set its first event to the correct round instead of always starting at 1.
 
+**Season reset**: an admin action (`/admin/season/reset`) deletes all events for the current season (and their entries, predictions, results, bonus predictions/results, and points log rows) and resets `next_round_number` back to 1, so the season can start over with a clean schedule. Teams and drivers are left untouched. This is a hard, unrecoverable delete — not an archive.
+
 **teams**
 `id, season_id, name, color`
 `color` is an optional hex string (e.g. `#3671C6`), admin-editable, used as the accent color on driver cards in the prediction UI.

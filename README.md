@@ -42,6 +42,9 @@ Drivers who don't finish still occupy a final position, placed after all classif
 - Team and driver names are seeded with real-world defaults but fully editable by an admin at any time.
 - Anyone can self-register (username + password). Joining mid-season starts you at 0 points — no penalty for joining late.
 
+### Season reset
+An admin can wipe the season's race data (`/admin/season/reset`) to start over: this permanently deletes every event and its entries, predictions, results, and points, and resets the next round number back to 1. Teams and drivers are left exactly as they are. This is a hard delete, not an archive — there's no way to recover the deleted data afterward.
+
 ### Prediction lock time
 Each session (qualifying, sprint, race) has its own start time, set by the admin per event. Predictions lock automatically, server-side, once that time passes — editable freely (any number of times) before then, read-only after. Race bonus predictions share the race session's lock time.
 

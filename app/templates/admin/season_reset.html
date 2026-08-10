@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Reset season — Admin{% endblock %}
+{% block content %}
+<p><a href="/admin">&larr; Admin</a></p>
+<h2>Reset season — {{ season.name }}</h2>
+
+<p class="muted">
+  This permanently deletes all {{ event_count }} event{{ "s" if event_count != 1 }} for
+  <strong>{{ season.name }}</strong> — along with their entries, predictions, results, bonuses, and points —
+  and resets the next round number back to 1. Teams and drivers are kept exactly as they are.
+</p>
+<p class="error">This cannot be undone.</p>
+
+<form method="post" action="/admin/season/reset" id="reset-season-form"
+      onsubmit="return confirm('Delete all race data for {{ season.name }}? This cannot be undone.');">
+  <label>
+    Type <strong>RESET</strong> to confirm
+    <input type="text" id="confirm-reset" required>
+  </label>
+  <button type="submit">Delete all race data</button>
+</form>
+<script>
+  document.getElementById("reset-season-form").addEventListener("submit", function (event) {
+    if (document.getElementById("confirm-reset").value !== "RESET") {
+      alert('Type RESET exactly to confirm.');
+      event.preventDefault();
+    }
+  });
+</script>
+{% endblock %}
