@@ -45,12 +45,15 @@ Drivers who don't finish still occupy a final position, placed after all classif
 ### Prediction lock time
 Each session (qualifying, sprint, race) has its own start time, set by the admin per event. Predictions lock automatically, server-side, once that time passes — editable freely (any number of times) before then, read-only after. Race bonus predictions share the race session's lock time.
 
+### Setting your predicted order
+Drag driver cards into place (mouse or touch) to set your predicted finishing order, or use the ▲/▼ buttons if you'd rather not drag. When a session predicts fewer positions than there are entered drivers (e.g. qualifying's top-10 cap on a bigger grid), extra drivers sit in a pool below the ranked list until you add them in. Each card shows the driver's name, car number, and a team-color accent.
+
 ---
 
 ## Architecture
 
 **Backend:** FastAPI (Python)
-**Frontend:** Jinja2 templates + HTMX — server-rendered, no separate JS framework or build step
+**Frontend:** Jinja2 templates + HTMX — server-rendered, no separate JS framework or build step (plus SortableJS via CDN for the drag-and-drop driver ranking)
 **Database:** PostgreSQL via SQLAlchemy + Alembic migrations (Supabase in production, SQLite/Postgres locally in dev)
 **PWA:** manifest.json + service worker for home-screen install
 **Hosting:** Render (free tier)
@@ -65,6 +68,17 @@ Each session (qualifying, sprint, race) has its own start time, set by the admin
 - `points_log` — computed points per user per event per session, with a breakdown, so the leaderboard has full history rather than just a running total
 
 Full schema details live in [`f1_prediction_league_spec.md`](./f1_prediction_league_spec.md).
+
+---
+
+## Running the app
+
+```bash
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Then open http://127.0.0.1:8000 in your browser.
 
 ---
 

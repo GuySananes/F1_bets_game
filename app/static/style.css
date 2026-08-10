@@ -486,6 +486,133 @@ a.card:active {
   font-weight: 600;
 }
 
+/* Drag-and-drop driver ranking (qualifying/sprint/race predictions) */
+.rank-help {
+  margin-bottom: var(--space-3);
+  font-size: 0.85rem;
+}
+
+.driver-rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+  min-height: 3rem;
+}
+
+.driver-pool-list {
+  opacity: 0.85;
+}
+
+.driver-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--team-color, var(--color-border));
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  touch-action: pan-y;
+  transition: box-shadow 150ms ease, transform 150ms ease;
+}
+
+.driver-card:focus-visible {
+  outline: 2px solid var(--color-red-light);
+  outline-offset: 2px;
+}
+
+.driver-card .position-badge {
+  min-width: 2rem;
+}
+
+.driver-card .drag-handle {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  margin: calc(var(--space-2) * -1) 0;
+  cursor: grab;
+  color: var(--color-text-muted, #9ca3af);
+  font-size: 1.2rem;
+  touch-action: none;
+}
+
+.driver-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.driver-card-name {
+  font-weight: 600;
+}
+
+.driver-card-meta {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #9ca3af);
+}
+
+.driver-card-controls {
+  flex: none;
+  display: flex;
+  gap: var(--space-1);
+}
+
+.driver-card-controls .move-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  color: inherit;
+}
+
+/* The ghost is the placeholder left in the list at the drop target while dragging —
+   styled as an explicit "frame" rather than just a dimmed card so the landing spot reads clearly. */
+.driver-card-ghost {
+  background: transparent;
+  border: 2px dashed var(--team-color, var(--color-red-light));
+  box-shadow: none;
+}
+
+.driver-card-ghost > * {
+  visibility: hidden;
+}
+
+.driver-card-chosen {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transform: scale(1.02);
+  cursor: grabbing;
+  z-index: 10;
+}
+
+.driver-card-drag {
+  opacity: 0.9;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  padding: 0;
+  margin: -1px;
+}
+
 /* Bonus question cards */
 .bonus-card label {
   margin-bottom: 0;

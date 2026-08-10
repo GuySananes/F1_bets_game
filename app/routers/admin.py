@@ -112,11 +112,12 @@ def list_teams(
 @router.post("/teams")
 def create_team(
     name: str = Form(...),
+    color: Optional[str] = Form(None),
     _: User = Depends(require_admin_page),
     db: Session = Depends(get_db),
 ):
     season = get_current_season(db)
-    db.add(Team(season_id=season.id, name=name))
+    db.add(Team(season_id=season.id, name=name, color=color or None))
     db.commit()
     return RedirectResponse(url="/admin/teams", status_code=303)
 
@@ -125,6 +126,7 @@ def create_team(
 def update_team(
     team_id: int,
     name: str = Form(...),
+    color: Optional[str] = Form(None),
     _: User = Depends(require_admin_page),
     db: Session = Depends(get_db),
 ):
@@ -132,6 +134,7 @@ def update_team(
     if team is None:
         raise HTTPException(status_code=404, detail="Team not found")
     team.name = name
+    team.color = color or None
     db.commit()
     return RedirectResponse(url="/admin/teams", status_code=303)
 

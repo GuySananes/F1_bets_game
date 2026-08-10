@@ -48,21 +48,62 @@
 {% endif %}
 
 {% else %}
-<form method="post" action="/predict/{{ event.id }}/{{ session_type }}">
-  <div class="position-list">
-    {% for position in positions %}
-    <div class="position-row">
-      <span class="position-badge">{{ position }}</span>
-      <select name="position_{{ position }}" required>
-        <option value="">Select driver…</option>
-        {% for driver in entered_drivers %}
-        <option value="{{ driver.id }}" {% if selected_by_position.get(position) == driver.id %}selected{% endif %}>
-          {{ driver.name }} ({{ driver.team.name }})
-        </option>
-        {% endfor %}
-      </select>
+<form method="post" action="/predict/{{ event.id }}/{{ session_type }}" id="predict-form">
+  <div class="rank-builder" id="rank-builder" data-position-count="{{ position_count }}">
+    <p class="muted rank-help">
+      Drag drivers to set your predicted order, or use the ▲▼ buttons
+      {% if has_pool %}(and +/− to move drivers in or out of the ranking){% endif %}.
+    </p>
+    <h3>Predicted order (top {{ position_count }})</h3>
+    <ol class="driver-rank-list" id="ranked-list">
+      {% for driver in ranked_drivers %}
+      <li class="driver-card" data-driver-id="{{ driver.id }}" tabindex="0"
+          style="--team-color: {{ driver.team.color or '#6b7280' }}">
+        <span class="position-badge" aria-hidden="true"></span>
+        <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⠿</span>
+        <span class="driver-card-info">
+          <span class="driver-card-name">{{ driver.name }}</span>
+          <span class="driver-card-meta">{% if driver.car_number %}#{{ driver.car_number }} &middot; {% endif %}{{ driver.team.name }}</span>
+        </span>
+        <span class="driver-card-controls">
+          <button type="button" class="move-btn move-up" aria-label="Move {{ driver.name }} up">&#9650;</button>
+          <button type="button" class="move-btn move-down" aria-label="Move {{ driver.name }} down">&#9660;</button>
+          {% if has_pool %}
+          <button type="button" class="move-btn toggle-btn" aria-label="Remove {{ driver.name }} from ranking">&minus;</button>
+          {% endif %}
+        </span>
+      </li>
+      {% endfor %}
+    </ol>
+
+    {% if has_pool %}
+    <h3>Other entered drivers</h3>
+    <ul class="driver-rank-list driver-pool-list" id="pool-list">
+      {% for driver in pool_drivers %}
+      <li class="driver-card" data-driver-id="{{ driver.id }}" tabindex="0"
+          style="--team-color: {{ driver.team.color or '#6b7280' }}">
+        <span class="position-badge" aria-hidden="true"></span>
+        <span class="drag-handle" aria-hidden="true" title="Drag to reorder">⠿</span>
+        <span class="driver-card-info">
+          <span class="driver-card-name">{{ driver.name }}</span>
+          <span class="driver-card-meta">{% if driver.car_number %}#{{ driver.car_number }} &middot; {% endif %}{{ driver.team.name }}</span>
+        </span>
+        <span class="driver-card-controls">
+          <button type="button" class="move-btn move-up" aria-label="Move {{ driver.name }} up">&#9650;</button>
+          <button type="button" class="move-btn move-down" aria-label="Move {{ driver.name }} down">&#9660;</button>
+          <button type="button" class="move-btn toggle-btn" aria-label="Add {{ driver.name }} to ranking">&plus;</button>
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <div id="position-inputs">
+      {% for driver in ranked_drivers %}
+      <input type="hidden" name="position_{{ loop.index }}" value="{{ driver.id }}">
+      {% endfor %}
     </div>
-    {% endfor %}
+    <div id="rank-announcer" class="visually-hidden" aria-live="polite"></div>
   </div>
 
   {% if show_bonuses %}
@@ -99,5 +140,6 @@
 
   <button type="submit" class="btn-block">Save predictions</button>
 </form>
+<script src="/static/predict.js"></script>
 {% endif %}
 {% endblock %}

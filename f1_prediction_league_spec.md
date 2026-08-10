@@ -7,7 +7,7 @@ A mobile-installable web app (PWA) for a small friend group (<20 users) to bet o
 
 ## Tech Stack
 - **Backend:** FastAPI (Python)
-- **Frontend:** Jinja2 templates + HTMX (server-rendered, app-like feel without a separate JS build)
+- **Frontend:** Jinja2 templates + HTMX (server-rendered, app-like feel without a separate JS build), plus SortableJS (via CDN) for the drag-and-drop driver-ranking control on the prediction forms
 - **PWA:** manifest.json + service worker for home-screen install
 - **Database:** PostgreSQL on Supabase (free tier, permanent — not a trial)
 - **Hosting:** Render (free web service tier, permanent — not a trial; note: spins down after ~15 min inactivity, ~30s cold start on wake)
@@ -63,6 +63,11 @@ For each position you predicted:
 - Before the lock, users can freely edit/resubmit predictions any number of times; only the latest version at lock time is scored.
 - Race bonus predictions share the race session's lock time.
 
+### Predicted-Order Input
+- Users set their predicted finishing order by dragging driver cards into place (mouse or touch), or via ▲/▼ buttons for keyboard/non-drag use — both produce the same ordered list.
+- When a session predicts fewer positions than there are entered drivers (qualifying's top-10 cap with a larger grid), unranked drivers sit in a separate pool below the ranked list; drivers move between the pool and the ranked list via drag or a +/− button. All positions must be filled before saving.
+- Driver cards show name, car number, team, and a team-color accent stripe; the locked/read-only view renders the same information without any editable controls.
+
 ---
 
 ## Database Schema (draft)
@@ -72,7 +77,8 @@ For each position you predicted:
 `next_round_number` is the round number the next created event will be auto-assigned; it increments on event creation and is directly editable by an admin, so a season that starts mid-year can set its first event to the correct round instead of always starting at 1.
 
 **teams**
-`id, season_id, name`
+`id, season_id, name, color`
+`color` is an optional hex string (e.g. `#3671C6`), admin-editable, used as the accent color on driver cards in the prediction UI.
 
 **drivers**
 `id, season_id, team_id, name, is_reserve, car_number, active`

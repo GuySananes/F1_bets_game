@@ -52,6 +52,35 @@ def position_count_for(event: Event, session_type: str, entered_count: int) -> i
     return event.grid_size
 
 
+def build_ranking(
+    entered_drivers: List[Driver],
+    selected_by_position: dict,
+    position_count: int,
+) -> tuple[List[Driver], List[Driver]]:
+    """Split entered drivers into (ranked, pool) for the drag-and-drop UI.
+
+    `ranked` holds drivers already assigned to positions 1..position_count, in
+    position order (stopping at the first gap). Everything else — including
+    drivers beyond the top N for qualifying — goes in `pool`, in their
+    default order, so the two lists together always cover every entered driver.
+    """
+    by_id = {d.id: d for d in entered_drivers}
+    ranked: List[Driver] = []
+    for position in range(1, position_count + 1):
+        driver_id = selected_by_position.get(position)
+        driver = by_id.get(driver_id) if driver_id else None
+        if driver is None:
+            break
+        ranked.append(driver)
+    if not ranked:
+        # No predictions saved yet (or the first position wasn't selected):
+        # default to the entered-driver order rather than leaving every slot empty.
+        ranked = entered_drivers[:position_count]
+    ranked_ids = {d.id for d in ranked}
+    pool = [d for d in entered_drivers if d.id not in ranked_ids]
+    return ranked, pool
+
+
 def validate_session_type(event: Event, session_type: str) -> None:
     if session_type not in SESSION_LABELS:
         raise HTTPException(status_code=404, detail="Unknown session type")
@@ -165,6 +194,7 @@ def session_form(
         .all()
     )
     selected_by_position = {p.predicted_position: p.driver_id for p in existing}
+    ranked_drivers, pool_drivers = build_ranking(entered_drivers, selected_by_position, position_count)
 
     show_bonuses = session_type == "race"
     context = {
@@ -174,8 +204,12 @@ def session_form(
         "label": SESSION_LABELS[session_type],
         "locked": event.is_locked(session_type),
         "positions": list(range(1, position_count + 1)),
+        "position_count": position_count,
         "entered_drivers": entered_drivers,
         "selected_by_position": selected_by_position,
+        "ranked_drivers": ranked_drivers,
+        "pool_drivers": pool_drivers,
+        "has_pool": len(entered_drivers) > position_count,
         "error": None,
         "show_bonuses": show_bonuses,
     }
@@ -230,6 +264,7 @@ async def submit_session(
         parsed_bonuses, error = parse_bonus_fields(form, entered_ids)
 
     if error is not None:
+        ranked_drivers, pool_drivers = build_ranking(entered_drivers, selected_by_position, position_count)
         context = {
             "current_user": current_user,
             "event": event,
@@ -237,8 +272,12 @@ async def submit_session(
             "label": SESSION_LABELS[session_type],
             "locked": False,
             "positions": list(range(1, position_count + 1)),
+            "position_count": position_count,
             "entered_drivers": entered_drivers,
             "selected_by_position": selected_by_position,
+            "ranked_drivers": ranked_drivers,
+            "pool_drivers": pool_drivers,
+            "has_pool": len(entered_drivers) > position_count,
             "error": error,
             "show_bonuses": show_bonuses,
         }
