@@ -122,6 +122,58 @@ def test_admin_can_create_event_with_custom_grid_size(client):
         db.close()
 
 
+def test_admin_can_set_explicit_round_number_when_creating_event(client):
+    make_admin_client(client)
+    seed_minimal_roster(client)
+
+    client.post(
+        "/admin/events",
+        data={
+            "round_number": 12,
+            "name": "Mid-Season Round",
+            "grid_size": 2,
+            "qualifying_start_time": "2099-01-01T10:00",
+            "race_start_time": "2099-01-02T13:00",
+        },
+    )
+
+    db = client.SessionLocal()
+    try:
+        event = db.query(Event).filter_by(name="Mid-Season Round").first()
+        assert event.round_number == 12
+        season = db.query(Season).first()
+        assert season.next_round_number == 13  # counter follows the explicit value, not just +1 from before
+    finally:
+        db.close()
+
+
+def test_new_event_defaults_all_active_non_reserve_drivers_into_entries(client):
+    make_admin_client(client)
+    season_id, team_id, driver_a_id, driver_b_id = seed_minimal_roster(client)
+    # driver_a_id is active/non-reserve, driver_b_id is reserve (per seed_minimal_roster)
+
+    client.post(
+        "/admin/events",
+        data={
+            "round_number": 1,
+            "name": "Default Entries GP",
+            "grid_size": 2,
+            "qualifying_start_time": "2099-01-01T10:00",
+            "race_start_time": "2099-01-02T13:00",
+        },
+    )
+
+    db = client.SessionLocal()
+    try:
+        event = db.query(Event).filter_by(name="Default Entries GP").first()
+        entries = db.query(EventEntry).filter_by(event_id=event.id).all()
+        entered_driver_ids = {e.driver_id for e in entries}
+        assert driver_a_id in entered_driver_ids
+        assert driver_b_id not in entered_driver_ids  # reserve, not entered by default
+    finally:
+        db.close()
+
+
 def test_admin_can_set_event_entries_including_substitution(client):
     make_admin_client(client)
     season_id, team_id, driver_a_id, driver_b_id = seed_minimal_roster(client)

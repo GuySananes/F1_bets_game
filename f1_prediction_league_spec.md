@@ -63,6 +63,14 @@ For each position you predicted:
 - Before the lock, users can freely edit/resubmit predictions any number of times; only the latest version at lock time is scored.
 - Race bonus predictions share the race session's lock time.
 
+### Random Bet on Missed Deadline
+- If a user has no prediction at all for a session by the time it locks, they get a randomly generated bet instead of being skipped — a random (but valid, distinct) finishing order, and for the race session, a random answer to every bonus question. Position rankings and race bonuses are always generated together as one unit, since a user is only ever "missing" the race session as a whole.
+- This is scope-per-session: a user who submitted qualifying but missed the race only has the race session randomized.
+- Generation is lazy, not a background job: it runs the moment an admin next touches that locked session — viewing the results hub, or entering/editing its results — so no separate scheduler is needed.
+- Admins can also trigger it manually and immediately from `/admin/events/{event_id}/results/{session_type}/missing-bets`: generate a random bet for one specific missing user, or bulk-randomize everyone still missing. Manual generation never overwrites a real submission — it's a no-op for any user who already has one.
+- Admins are excluded from automatic backfill by default (they run the league and may not always be playing); the bulk admin action can opt them in explicitly.
+- Auto-generated rows are flagged (`is_auto_generated`) so the locked prediction view and the admin missing-bets page can both show an "Auto-filled" badge.
+
 ### Predicted-Order Input
 - Users set their predicted finishing order by dragging driver cards into place (mouse or touch), or via ▲/▼ buttons for keyboard/non-drag use — both produce the same ordered list.
 - When a session predicts fewer positions than there are entered drivers (qualifying's top-10 cap with a larger grid), unranked drivers sit in a separate pool below the ranked list; drivers move between the pool and the ranked list via drag or a +/− button. All positions must be filled before saving.
@@ -74,7 +82,7 @@ For each position you predicted:
 
 **seasons**
 `id, year, name, default_grid_size, next_round_number`
-`next_round_number` is the round number the next created event will be auto-assigned; it increments on event creation and is directly editable by an admin, so a season that starts mid-year can set its first event to the correct round instead of always starting at 1.
+`next_round_number` is the round number a new event defaults to; it's directly editable both via a dedicated season-settings field and inline on the "New event" form itself (admins can just type the round they want, e.g. `12`, when creating that event). Whichever round number is actually used when an event is created becomes the new `next_round_number` (that value + 1), so the counter always tracks the highest round assigned so far — including catching up after an admin skips ahead or fills in an earlier round out of order.
 
 **Season reset**: an admin action (`/admin/season/reset`) deletes all events for the current season (and their entries, predictions, results, bonus predictions/results, and points log rows) and resets `next_round_number` back to 1, so the season can start over with a clean schedule. Teams and drivers are left untouched. This is a hard, unrecoverable delete — not an archive.
 
@@ -91,6 +99,7 @@ For each position you predicted:
 
 **event_entries** (actual field for a given weekend — handles substitutions/missing drivers)
 `id, event_id, driver_id, is_substitute, substituted_for_driver_id`
+When an event is created, every active, non-reserve driver on the season roster is entered by default (one `event_entries` row each, `is_substitute` false) so the admin doesn't have to check each driver in by hand. Reserves are left out by default since they only race when subbing in. The admin can still add/remove entries and set up substitutions afterward from the event's "Set entries" page.
 
 **users**
 `id, username, password_hash, is_admin, created_at`
@@ -100,16 +109,17 @@ For each position you predicted:
 Server-side login sessions: the client holds only an opaque, randomly generated token (in an HttpOnly cookie); each row here is the server-side record it maps to. A session is valid only while a matching, unexpired row exists — logging out deletes the row.
 
 **predictions**
-`id, user_id, event_id, session_type [qualifying|sprint|race], predicted_position, driver_id`
+`id, user_id, event_id, session_type [qualifying|sprint|race], predicted_position, driver_id, is_auto_generated`
 - Unique per (user, event, session_type, predicted_position)
 - Unique per (user, event, session_type, driver_id)
+- `is_auto_generated` is true when the row was created by the random-bet-on-missed-deadline feature (see Random Bet on Missed Deadline above) rather than submitted by the user.
 
 **results**
 `id, event_id, session_type, actual_position, driver_id, dnf`
 
 **bonus_predictions**
-`id, user_id, event_id, bonus_type, driver_id, bool_value, int_value`
-(only the relevant value column populated per bonus_type)
+`id, user_id, event_id, bonus_type, driver_id, bool_value, int_value, is_auto_generated`
+(only the relevant value column populated per bonus_type; `is_auto_generated` has the same meaning as on `predictions`)
 
 **bonus_results**
 `id, event_id, bonus_type, driver_id, bool_value, int_value`

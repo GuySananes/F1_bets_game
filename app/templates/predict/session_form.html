@@ -13,7 +13,12 @@
 {% endif %}
 
 {% if locked %}
-<p><span class="badge badge-locked">Locked</span> Predictions for this session are locked.</p>
+<p>
+  <span class="badge badge-locked">Locked</span>
+  {% if auto_generated %}<span class="badge badge-warning">Auto-filled</span>{% endif %}
+  Predictions for this session are locked.
+  {% if auto_generated %}You missed the deadline, so a random bet was generated for you.{% endif %}
+</p>
 <div class="position-list">
   {% for position in positions %}
   <div class="position-row">
@@ -58,6 +63,7 @@
       Drag drivers to set your predicted order, or use the ▲▼ buttons
       {% if has_pool %}(and +/− to move drivers in or out of the ranking){% endif %}.
     </p>
+    <button type="button" id="randomize-btn" class="btn-secondary">🎲 Randomize</button>
     <h3>Predicted order (top {{ position_count }})</h3>
     <ol class="driver-rank-list" id="ranked-list">
       {% for driver in ranked_drivers %}
@@ -138,7 +144,7 @@
               {% endfor %}
             </select>
           {% elif kind == "int" %}
-            <input type="number" name="{{ bonus_type }}" min="0"
+            <input type="number" name="{{ bonus_type }}" min="0" max="{{ entered_drivers|length }}"
                    value="{{ existing.int_value if existing and existing.int_value is not none else (entered_drivers|length if bonus_type == 'classified_finishers' else '') }}" required>
           {% endif %}
         </label>

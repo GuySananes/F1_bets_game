@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Missing bets — {{ event.name }} {{ label }}{% endblock %}
+{% block content %}
+<p><a href="/admin/events/{{ event.id }}/results">&larr; Results</a></p>
+<h2>Missing bets — {{ event.name }} ({{ label }})</h2>
+<p class="muted">
+  {% if locked %}
+    This session is locked. Users with no submission below can be given a random bet.
+  {% else %}
+    This session is not locked yet — users still have time to submit their own prediction.
+    You can still force a random bet now if needed.
+  {% endif %}
+</p>
+
+{% if missing_users %}
+<form method="post" action="/admin/events/{{ event.id }}/results/{{ session_type }}/random-bets/bulk">
+  <button type="submit">Randomize all missing ({{ missing_users|length }})</button>
+</form>
+{% endif %}
+
+<table>
+  <thead><tr><th>User</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+    {% for user in users %}
+    <tr>
+      <td>{{ user.username }}{% if user.is_admin %} <span class="muted">(admin)</span>{% endif %}</td>
+      <td>
+        {% if user.id in auto_generated_user_ids %}
+        <span class="badge badge-warning">Auto-filled</span>
+        {% elif user.id in submitted_user_ids %}
+        <span class="badge badge-scored">Submitted</span>
+        {% else %}
+        <span class="badge badge-warning">Missing</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if user.id not in submitted_user_ids and user.id not in auto_generated_user_ids %}
+        <form method="post" action="/admin/events/{{ event.id }}/results/{{ session_type }}/random-bets/{{ user.id }}">
+          <button type="submit">Generate random bet</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -65,6 +65,55 @@
     rebuildHiddenInputs();
   }
 
+  function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  function randomizeRanking() {
+    const allCards = Array.from(rankedList.children);
+    if (poolList) allCards.push(...Array.from(poolList.children));
+    shuffle(allCards);
+
+    allCards.slice(0, positionCount).forEach((card) => rankedList.appendChild(card));
+    if (poolList) allCards.slice(positionCount).forEach((card) => poolList.appendChild(card));
+
+    syncAll();
+    announce("Predicted order randomized.");
+  }
+
+  function randomizeBonuses() {
+    document.querySelectorAll(".bonus-card").forEach((card) => {
+      const select = card.querySelector("select");
+      if (select) {
+        const options = Array.from(select.options).filter((o) => o.value);
+        if (options.length) select.value = options[Math.floor(Math.random() * options.length)].value;
+        return;
+      }
+      const checkbox = card.querySelector(".flag-toggle-input");
+      if (checkbox) {
+        checkbox.checked = Math.random() < 0.5;
+        return;
+      }
+      const numberInput = card.querySelector('input[type="number"]');
+      if (numberInput) {
+        const max = parseInt(numberInput.max, 10) || positionCount;
+        numberInput.value = Math.floor(Math.random() * (max + 1));
+      }
+    });
+  }
+
+  const randomizeBtn = document.getElementById("randomize-btn");
+  if (randomizeBtn) {
+    randomizeBtn.addEventListener("click", () => {
+      randomizeRanking();
+      randomizeBonuses();
+    });
+  }
+
   function moveCard(card, direction) {
     const sibling = direction === "up" ? card.previousElementSibling : card.nextElementSibling;
     if (!sibling) return;

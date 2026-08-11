@@ -42,9 +42,10 @@
 <p class="muted">Sets the round number the next created event will get — adjust this when starting a season mid-year.</p>
 
 <h3>New event</h3>
-<p class="muted">Predictions for each session lock automatically once its start time passes. This event will be round {{ season.next_round_number }}.</p>
+<p class="muted">Predictions for each session lock automatically once its start time passes. All active, non-reserve drivers are entered by default — adjust that afterward from "Set entries" if needed.</p>
 <form method="post" action="/admin/events">
   <label>Name <input type="text" name="name" required></label>
+  <label>Round number <input type="number" name="round_number" min="1" value="{{ season.next_round_number }}" required></label>
   <label><input type="checkbox" name="has_sprint" id="has_sprint"> Has sprint</label>
   <label>Grid size <input type="number" name="grid_size" min="1" required></label>
   <label>Qualifying start <input type="datetime-local" name="qualifying_start_time" required></label>

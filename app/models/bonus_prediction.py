@@ -18,6 +18,7 @@ class BonusPrediction(Base):
     driver_id: Mapped[int] = mapped_column(ForeignKey("drivers.id"), nullable=True)
     bool_value: Mapped[bool] = mapped_column(Boolean, nullable=True)
     int_value: Mapped[int] = mapped_column(Integer, nullable=True)
+    is_auto_generated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     user: Mapped["User"] = relationship()
     event: Mapped["Event"] = relationship()

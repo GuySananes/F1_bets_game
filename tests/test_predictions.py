@@ -308,6 +308,26 @@ def test_db_level_unique_constraint_blocks_duplicate_position(client):
         db.close()
 
 
+def test_editable_form_shows_randomize_button(client):
+    register_and_login(client)
+    event_id, driver_ids = seed_event(client, grid_size=6)
+
+    response = client.get(f"/predict/{event_id}/qualifying")
+
+    assert response.status_code == 200
+    assert 'id="randomize-btn"' in response.text
+
+
+def test_locked_form_hides_randomize_button(client):
+    register_and_login(client)
+    event_id, driver_ids = seed_event(client, grid_size=6, qualifying_start=PAST)
+
+    response = client.get(f"/predict/{event_id}/qualifying")
+
+    assert response.status_code == 200
+    assert 'id="randomize-btn"' not in response.text
+
+
 def test_unauthenticated_user_redirected_to_login(client):
     event_id, _ = seed_event(client, grid_size=6)
 

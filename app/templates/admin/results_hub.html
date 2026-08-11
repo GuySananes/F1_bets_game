@@ -4,19 +4,21 @@
 <p><a href="/admin/events">&larr; Events</a></p>
 <h2>Results — {{ event.name }}</h2>
 <table>
-  <thead><tr><th>Session</th><th>Status</th><th></th></tr></thead>
+  <thead><tr><th>Session</th><th>Status</th><th></th><th></th></tr></thead>
   <tbody>
     {% for s in sessions %}
     <tr>
       <td>{{ s.label }}</td>
       <td><span class="badge {{ 'badge-scored' if s.entered else 'badge-warning' }}">{{ "Entered" if s.entered else "Not entered" }}</span></td>
       <td><a href="/admin/events/{{ event.id }}/results/{{ s.session_type }}">{{ "Edit" if s.entered else "Enter" }} results</a></td>
+      <td><a href="/admin/events/{{ event.id }}/results/{{ s.session_type }}/missing-bets">Missing bets</a></td>
     </tr>
     {% endfor %}
     <tr>
       <td>Race bonuses</td>
       <td><span class="badge {{ 'badge-scored' if bonuses_entered else 'badge-warning' }}">{{ "Entered" if bonuses_entered else "Not entered" }}</span></td>
       <td><a href="/admin/events/{{ event.id }}/results/bonuses">{{ "Edit" if bonuses_entered else "Enter" }} results</a></td>
+      <td><a href="/admin/events/{{ event.id }}/results/race/missing-bets">Missing bets</a></td>
     </tr>
   </tbody>
 </table>

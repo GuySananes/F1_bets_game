@@ -200,6 +200,7 @@ def session_form(
     )
     selected_by_position = {p.predicted_position: p.driver_id for p in existing}
     ranked_drivers, pool_drivers = build_ranking(entered_drivers, selected_by_position, position_count)
+    auto_generated = any(p.is_auto_generated for p in existing)
 
     show_bonuses = session_type == "race"
     context = {
@@ -208,6 +209,7 @@ def session_form(
         "session_type": session_type,
         "label": SESSION_LABELS[session_type],
         "locked": event.is_locked(session_type),
+        "auto_generated": auto_generated,
         "positions": list(range(1, position_count + 1)),
         "position_count": position_count,
         "entered_drivers": entered_drivers,

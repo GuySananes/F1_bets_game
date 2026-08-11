@@ -1,4 +1,4 @@
-from sqlalchemy import Enum, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import Boolean, Enum, ForeignKey, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -24,6 +24,7 @@ class Prediction(Base):
     session_type: Mapped[SessionType] = mapped_column(Enum(SessionType), nullable=False)
     predicted_position: Mapped[int] = mapped_column(Integer, nullable=False)
     driver_id: Mapped[int] = mapped_column(ForeignKey("drivers.id"), nullable=False)
+    is_auto_generated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     user: Mapped["User"] = relationship()
     event: Mapped["Event"] = relationship()

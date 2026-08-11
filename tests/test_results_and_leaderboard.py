@@ -328,3 +328,46 @@ def test_non_admin_cannot_enter_results(client):
     )
 
     assert response.status_code == 403
+
+
+def test_user_who_never_submitted_still_gets_scored_after_lock(client):
+    """Regression test: recompute_session_points only iterated users who already
+    had prediction rows, silently skipping no-shows. Entering results for a
+    locked session should now backfill a random bet first so everyone gets scored."""
+    admin = make_admin_client(client)
+    event_id, drivers, alice_id, bob_id = build_scenario(client)
+
+    # move the event's qualifying lock into the past so admin results-entry
+    # triggers the lazy random-bet backfill for anyone missing a submission
+    db = client.SessionLocal()
+    try:
+        event = db.get(Event, event_id)
+        event.qualifying_start_time = datetime.utcnow() - timedelta(days=1)
+        db.commit()
+    finally:
+        db.close()
+
+    register(client, "carol")
+    db = client.SessionLocal()
+    try:
+        carol_id = db.query(User).filter_by(username="carol").first().id
+    finally:
+        db.close()
+
+    login(client, "root", "pw")
+    enter_qualifying_results(admin, event_id, drivers)
+
+    db = client.SessionLocal()
+    try:
+        carol_predictions = db.query(Prediction).filter_by(
+            user_id=carol_id, event_id=event_id, session_type="qualifying"
+        ).all()
+        assert len(carol_predictions) == 3
+        assert all(p.is_auto_generated for p in carol_predictions)
+
+        carol_log = db.query(PointsLog).filter_by(
+            user_id=carol_id, event_id=event_id, session_type="qualifying"
+        ).first()
+        assert carol_log is not None
+    finally:
+        db.close()

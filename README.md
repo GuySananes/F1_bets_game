@@ -42,11 +42,17 @@ Drivers who don't finish still occupy a final position, placed after all classif
 - Team and driver names are seeded with real-world defaults but fully editable by an admin at any time.
 - Anyone can self-register (username + password). Joining mid-season starts you at 0 points — no penalty for joining late.
 
+### Creating an event
+When an admin creates a new event, every active, non-reserve driver on the season roster is entered by default — no need to check each one in manually. Substitutions and no-shows can still be adjusted afterward from that event's "Set entries" page. The round number defaults to the season's next round but can be typed directly on the event-creation form (e.g. to jump to round 12), and the season's counter follows whatever value was actually used.
+
 ### Season reset
 An admin can wipe the season's race data (`/admin/season/reset`) to start over: this permanently deletes every event and its entries, predictions, results, and points, and resets the next round number back to 1. Teams and drivers are left exactly as they are. This is a hard delete, not an archive — there's no way to recover the deleted data afterward.
 
 ### Prediction lock time
 Each session (qualifying, sprint, race) has its own start time, set by the admin per event. Predictions lock automatically, server-side, once that time passes — editable freely (any number of times) before then, read-only after. Race bonus predictions share the race session's lock time.
+
+### Random bet on missed deadline
+Anyone who has no prediction at all for a session once it locks gets a randomly generated bet instead of being skipped (a random finishing order, plus random bonus answers for the race session). Generation is lazy — it happens automatically the next time an admin views or enters results for that locked session, no scheduler required — and admins can also trigger it manually per-user or in bulk from the results hub. It never overwrites a real submission, and auto-filled predictions show an "Auto-filled" badge. Admins are excluded from automatic backfill by default.
 
 ### Setting your predicted order
 Drag driver cards into place (mouse or touch) to set your predicted finishing order, or use the ▲/▼ buttons if you'd rather not drag. When a session predicts fewer positions than there are entered drivers (e.g. qualifying's top-10 cap on a bigger grid), extra drivers sit in a pool below the ranked list until you add them in. Each card shows the driver's name, car number, and a team-color accent.

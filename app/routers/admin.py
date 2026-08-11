@@ -25,6 +25,12 @@ from app.models import (
 )
 from app.points import recompute_session_points
 from app.prediction_constants import BONUS_FIELDS, SESSION_LABELS
+from app.random_bet import (
+    backfill_missing_predictions,
+    generate_random_bet_for_user,
+    has_any_submission,
+    users_missing_submission,
+)
 from app.routers.predictions import get_entered_drivers
 from app.scoring import order_dnf_drivers
 from app.templating import templates
@@ -285,6 +291,7 @@ def list_events(
 @router.post("/events")
 def create_event(
     name: str = Form(...),
+    round_number: Optional[int] = Form(None),
     has_sprint: Optional[str] = Form(None),
     grid_size: int = Form(...),
     qualifying_start_time: str = Form(...),
@@ -295,9 +302,10 @@ def create_event(
 ):
     season = get_current_season(db)
     is_sprint = bool(has_sprint)
+    resolved_round_number = round_number if round_number is not None else season.next_round_number
     event = Event(
         season_id=season.id,
-        round_number=season.next_round_number,
+        round_number=resolved_round_number,
         name=name,
         has_sprint=is_sprint,
         grid_size=grid_size,
@@ -305,8 +313,17 @@ def create_event(
         race_start_time=datetime.fromisoformat(race_start_time),
         sprint_start_time=datetime.fromisoformat(sprint_start_time) if (is_sprint and sprint_start_time) else None,
     )
-    season.next_round_number += 1
+    season.next_round_number = resolved_round_number + 1
     db.add(event)
+    db.flush()
+
+    # Default every active, non-reserve driver on the season roster into the
+    # entry list so the admin doesn't have to manually check each one in —
+    # substitutions/no-shows can still be adjusted from the entries page.
+    default_drivers = db.query(Driver).filter_by(season_id=season.id, is_reserve=False, active=True).all()
+    for driver in default_drivers:
+        db.add(EventEntry(event_id=event.id, driver_id=driver.id, is_substitute=False))
+
     db.commit()
     return RedirectResponse(url="/admin/events", status_code=303)
 
@@ -488,6 +505,9 @@ def results_hub(
     if event.has_sprint:
         sessions.insert(1, "sprint")
 
+    for s in sessions:
+        backfill_missing_predictions(db, event, s)
+
     session_info = [
         {
             "session_type": s,
@@ -601,9 +621,107 @@ async def submit_bonus_results(
         )
     db.commit()
 
+    backfill_missing_predictions(db, event, "race")
     recompute_session_points(db, event, "race")
 
     return RedirectResponse(url=f"/admin/events/{event_id}/results", status_code=303)
+
+
+@router.get("/events/{event_id}/results/{session_type}/missing-bets")
+def session_missing_bets(
+    event_id: int,
+    session_type: str,
+    request: Request,
+    current_user: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+):
+    event = get_event_or_404(db, event_id)
+    if session_type not in SESSION_LABELS:
+        raise HTTPException(status_code=404, detail="Unknown session type")
+    if session_type == "sprint" and not event.has_sprint:
+        raise HTTPException(status_code=404, detail="This event has no sprint session")
+
+    users = db.query(User).order_by(User.username).all()
+    auto_generated_user_ids = {
+        row[0]
+        for row in db.query(Prediction.user_id)
+        .filter_by(event_id=event_id, session_type=session_type, is_auto_generated=True)
+        .distinct()
+        .all()
+    }
+    submitted_user_ids = {
+        user.id
+        for user in users
+        if user.id not in auto_generated_user_ids
+        and has_any_submission(db, user.id, event_id, session_type)
+    }
+
+    return templates.TemplateResponse(
+        request,
+        "admin/session_missing_bets.html",
+        {
+            "current_user": current_user,
+            "event": event,
+            "session_type": session_type,
+            "label": SESSION_LABELS[session_type],
+            "locked": event.is_locked(session_type),
+            "users": users,
+            "submitted_user_ids": submitted_user_ids,
+            "auto_generated_user_ids": auto_generated_user_ids,
+            "missing_users": [
+                u for u in users
+                if u.id not in submitted_user_ids and u.id not in auto_generated_user_ids
+            ],
+        },
+    )
+
+
+@router.post("/events/{event_id}/results/{session_type}/random-bets/bulk")
+def bulk_random_bets(
+    event_id: int,
+    session_type: str,
+    _: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+):
+    event = get_event_or_404(db, event_id)
+    if session_type not in SESSION_LABELS:
+        raise HTTPException(status_code=404, detail="Unknown session type")
+    if session_type == "sprint" and not event.has_sprint:
+        raise HTTPException(status_code=404, detail="This event has no sprint session")
+
+    backfill_missing_predictions(db, event, session_type, include_admins=True)
+    recompute_session_points(db, event, session_type)
+
+    return RedirectResponse(
+        url=f"/admin/events/{event_id}/results/{session_type}/missing-bets", status_code=303
+    )
+
+
+@router.post("/events/{event_id}/results/{session_type}/random-bets/{user_id}")
+def single_random_bet(
+    event_id: int,
+    session_type: str,
+    user_id: int,
+    _: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+):
+    event = get_event_or_404(db, event_id)
+    if session_type not in SESSION_LABELS:
+        raise HTTPException(status_code=404, detail="Unknown session type")
+    if session_type == "sprint" and not event.has_sprint:
+        raise HTTPException(status_code=404, detail="This event has no sprint session")
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not has_any_submission(db, user_id, event_id, session_type):
+        generate_random_bet_for_user(db, event, session_type, user_id)
+        db.commit()
+        recompute_session_points(db, event, session_type)
+
+    return RedirectResponse(
+        url=f"/admin/events/{event_id}/results/{session_type}/missing-bets", status_code=303
+    )
 
 
 @router.get("/events/{event_id}/results/{session_type}")
@@ -733,6 +851,7 @@ async def submit_session_results(
         )
     db.commit()
 
+    backfill_missing_predictions(db, event, session_type)
     recompute_session_points(db, event, session_type)
 
     return RedirectResponse(url=f"/admin/events/{event_id}/results", status_code=303)
