@@ -9,7 +9,7 @@
   <a class="card session-card" href="/predict/{{ event.id }}/{{ s.session_type }}">
     <div class="session-card-main">
       <h3>{{ s.label }}</h3>
-      <span class="muted">Locks {{ s.start_time }}</span>
+      <span class="muted">Locks <time data-utc="{{ s.start_time.isoformat() }}Z">{{ s.start_time }} UTC</time></span>
     </div>
     <span class="badge {{ 'badge-locked' if s.locked else 'badge-open' }}">{{ "Locked" if s.locked else "Open" }}</span>
   </a>

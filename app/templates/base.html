@@ -24,6 +24,7 @@
       window.addEventListener("load", () => navigator.serviceWorker.register("/static/sw.js"));
     }
   </script>
+  <script src="/static/local-time.js" defer></script>
 </head>
 <body>
   {% set path = request.url.path %}

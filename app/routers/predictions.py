@@ -118,10 +118,16 @@ def overview(
     current_user: User = Depends(require_login_page),
     db: Session = Depends(get_db),
 ):
+    from app.random_bet import backfill_missing_predictions
+
     event = get_event_or_404(db, event_id)
     sessions = ["qualifying", "race"]
     if event.has_sprint:
         sessions.insert(1, "sprint")
+
+    for s in sessions:
+        if event.is_locked(s):
+            backfill_missing_predictions(db, event, s)
 
     session_info = [
         {
@@ -187,8 +193,13 @@ def session_form(
     db: Session = Depends(get_db),
     saved: Optional[bool] = False,
 ):
+    from app.random_bet import backfill_missing_predictions
+
     event = get_event_or_404(db, event_id)
     validate_session_type(event, session_type)
+
+    if event.is_locked(session_type):
+        backfill_missing_predictions(db, event, session_type)
 
     entered_drivers = get_entered_drivers(db, event)
     position_count = position_count_for(event, session_type, len(entered_drivers))

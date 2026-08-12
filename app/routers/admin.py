@@ -288,6 +288,13 @@ def list_events(
     )
 
 
+def parse_utc_datetime(value: str) -> datetime:
+    """Parse a UTC ISO string (as produced by the browser's Date.toISOString(),
+    e.g. "2026-08-12T15:09:00.000Z") into a naive UTC datetime, matching what
+    Event.is_locked() compares against (datetime.utcnow())."""
+    return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+
+
 @router.post("/events")
 def create_event(
     name: str = Form(...),
@@ -309,9 +316,9 @@ def create_event(
         name=name,
         has_sprint=is_sprint,
         grid_size=grid_size,
-        qualifying_start_time=datetime.fromisoformat(qualifying_start_time),
-        race_start_time=datetime.fromisoformat(race_start_time),
-        sprint_start_time=datetime.fromisoformat(sprint_start_time) if (is_sprint and sprint_start_time) else None,
+        qualifying_start_time=parse_utc_datetime(qualifying_start_time),
+        race_start_time=parse_utc_datetime(race_start_time),
+        sprint_start_time=parse_utc_datetime(sprint_start_time) if (is_sprint and sprint_start_time) else None,
     )
     season.next_round_number = resolved_round_number + 1
     db.add(event)

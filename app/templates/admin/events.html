@@ -17,9 +17,9 @@
       <td>{{ event.name }}</td>
       <td>{{ "Yes" if event.has_sprint else "No" }}</td>
       <td>{{ event.grid_size }}</td>
-      <td>{{ event.qualifying_start_time }}</td>
-      <td>{{ event.sprint_start_time or "—" }}</td>
-      <td>{{ event.race_start_time }}</td>
+      <td><time data-utc="{{ event.qualifying_start_time.isoformat() }}Z">{{ event.qualifying_start_time }} UTC</time></td>
+      <td>{% if event.sprint_start_time %}<time data-utc="{{ event.sprint_start_time.isoformat() }}Z">{{ event.sprint_start_time }} UTC</time>{% else %}—{% endif %}</td>
+      <td><time data-utc="{{ event.race_start_time.isoformat() }}Z">{{ event.race_start_time }} UTC</time></td>
       <td>
         <a href="/admin/events/{{ event.id }}/entries">Set entries</a> ·
         <a href="/admin/events/{{ event.id }}/results">Results</a>
@@ -42,15 +42,32 @@
 <p class="muted">Sets the round number the next created event will get — adjust this when starting a season mid-year.</p>
 
 <h3>New event</h3>
-<p class="muted">Predictions for each session lock automatically once its start time passes. All active, non-reserve drivers are entered by default — adjust that afterward from "Set entries" if needed.</p>
-<form method="post" action="/admin/events">
+<p class="muted">Predictions for each session lock automatically once its start time passes. Times below are entered in your device's local time zone. All active, non-reserve drivers are entered by default — adjust that afterward from "Set entries" if needed.</p>
+<form method="post" action="/admin/events" id="new-event-form">
   <label>Name <input type="text" name="name" required></label>
   <label>Round number <input type="number" name="round_number" min="1" value="{{ season.next_round_number }}" required></label>
   <label><input type="checkbox" name="has_sprint" id="has_sprint"> Has sprint</label>
   <label>Grid size <input type="number" name="grid_size" min="1" required></label>
-  <label>Qualifying start <input type="datetime-local" name="qualifying_start_time" required></label>
-  <label>Sprint start <input type="datetime-local" name="sprint_start_time"></label>
-  <label>Race start <input type="datetime-local" name="race_start_time" required></label>
+  <label>Qualifying start <input type="datetime-local" id="qualifying_start_time_local" required></label>
+  <label>Sprint start <input type="datetime-local" id="sprint_start_time_local"></label>
+  <label>Race start <input type="datetime-local" id="race_start_time_local" required></label>
+  <input type="hidden" name="qualifying_start_time" id="qualifying_start_time">
+  <input type="hidden" name="sprint_start_time" id="sprint_start_time">
+  <input type="hidden" name="race_start_time" id="race_start_time">
   <button type="submit">Create event</button>
 </form>
+<script>
+  (function () {
+    var form = document.getElementById("new-event-form");
+    form.addEventListener("submit", function () {
+      [["qualifying_start_time_local", "qualifying_start_time"],
+       ["sprint_start_time_local", "sprint_start_time"],
+       ["race_start_time_local", "race_start_time"]].forEach(function (pair) {
+        var localInput = document.getElementById(pair[0]);
+        var hiddenInput = document.getElementById(pair[1]);
+        hiddenInput.value = localInput.value ? new Date(localInput.value).toISOString() : "";
+      });
+    });
+  })();
+</script>
 {% endblock %}

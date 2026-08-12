@@ -335,3 +335,71 @@ def test_unauthenticated_user_redirected_to_login(client):
 
     assert response.status_code == 303
     assert response.headers["location"].startswith("/login")
+
+
+def test_visiting_locked_session_auto_fills_and_shows_random_bet(client):
+    register_and_login(client)
+    event_id, driver_ids = seed_event(client, grid_size=6, qualifying_start=PAST)
+
+    response = client.get(f"/predict/{event_id}/qualifying")
+
+    assert response.status_code == 200
+    assert "Auto-filled" in response.text
+    assert "(no pick)" not in response.text
+
+    db = client.SessionLocal()
+    try:
+        from app.models import User
+
+        user = db.query(User).filter_by(username="alice").first()
+        predictions = db.query(Prediction).filter_by(
+            user_id=user.id, event_id=event_id, session_type="qualifying"
+        ).all()
+        assert len(predictions) == 6
+        assert all(p.is_auto_generated for p in predictions)
+    finally:
+        db.close()
+
+
+def test_visiting_locked_session_backfills_other_missing_users_too(client):
+    register_and_login(client, username="alice")
+    event_id, driver_ids = seed_event(client, grid_size=6, qualifying_start=PAST)
+
+    db = client.SessionLocal()
+    try:
+        from app.models import User
+
+        bob = User(username="bob", password_hash="x", is_admin=False)
+        db.add(bob)
+        db.commit()
+        db.refresh(bob)
+        bob_id = bob.id
+    finally:
+        db.close()
+
+    response = client.get(f"/predict/{event_id}/qualifying")
+    assert response.status_code == 200
+
+    db = client.SessionLocal()
+    try:
+        bob_predictions = db.query(Prediction).filter_by(
+            user_id=bob_id, event_id=event_id, session_type="qualifying"
+        ).all()
+        assert len(bob_predictions) == 6
+        assert all(p.is_auto_generated for p in bob_predictions)
+    finally:
+        db.close()
+
+
+def test_visiting_unlocked_session_does_not_auto_fill(client):
+    register_and_login(client)
+    event_id, driver_ids = seed_event(client, grid_size=6, qualifying_start=FUTURE)
+
+    response = client.get(f"/predict/{event_id}/qualifying")
+
+    assert response.status_code == 200
+    db = client.SessionLocal()
+    try:
+        assert db.query(Prediction).filter_by(event_id=event_id, session_type="qualifying").count() == 0
+    finally:
+        db.close()
