@@ -350,21 +350,12 @@ def delete_event(
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    has_dependents = any(
-        [
-            db.query(Prediction).filter_by(event_id=event_id).first() is not None,
-            db.query(Result).filter_by(event_id=event_id).first() is not None,
-            db.query(BonusPrediction).filter_by(event_id=event_id).first() is not None,
-            db.query(BonusResult).filter_by(event_id=event_id).first() is not None,
-            db.query(PointsLog).filter_by(event_id=event_id).first() is not None,
-        ]
-    )
-    if has_dependents:
-        return RedirectResponse(
-            url="/admin/events?error=Cannot+delete+an+event+with+predictions%2C+results%2C+or+points+on+record.",
-            status_code=303,
-        )
-
+    db.query(PointsLog).filter_by(event_id=event_id).delete()
+    db.query(BonusResult).filter_by(event_id=event_id).delete()
+    db.query(BonusPrediction).filter_by(event_id=event_id).delete()
+    db.query(Result).filter_by(event_id=event_id).delete()
+    db.query(Prediction).filter_by(event_id=event_id).delete()
+    db.query(EventEntry).filter_by(event_id=event_id).delete()
     db.delete(event)
     db.commit()
     return RedirectResponse(url="/admin/events", status_code=303)

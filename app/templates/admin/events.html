@@ -25,7 +25,7 @@
         <a href="/admin/events/{{ event.id }}/results">Results</a>
       </td>
       <td>
-        <form class="inline" method="post" action="/admin/events/{{ event.id }}/delete" onsubmit="return confirm('Delete event {{ event.name }}?');">
+        <form class="inline" method="post" action="/admin/events/{{ event.id }}/delete" onsubmit="return confirm('Delete event {{ event.name }}? This will also delete any predictions, results, and points logged for it.');">
           <button type="submit">Delete</button>
         </form>
       </td>

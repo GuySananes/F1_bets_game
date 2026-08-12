@@ -48,7 +48,7 @@ For each position you predicted:
 - Season-specific: 11 teams this season (10 last season) — team count and grid size vary by year, so nothing is hardcoded.
 - 2 primary drivers per team, plus one or more reserve/spare drivers who may substitute in for a given race weekend.
 - Default team/driver names are seeded at season start but must be editable by an admin at any time (renames, roster corrections).
-- Admins can also add and delete teams, drivers, and events from the admin UI. A delete is blocked (with an explanation) if the row has dependent data — a team with drivers, a driver with predictions/results/entries, or an event with predictions/results/bonus data/points — to avoid orphaning or silently destroying scored history.
+- Admins can also add and delete teams, drivers, and events from the admin UI. Deleting a team or driver is blocked (with an explanation) if the row has dependent data — a team with drivers, or a driver with predictions/results/entries — to avoid orphaning history. Deleting an event is never blocked: it cascades to delete that event's entries, predictions, results, bonus predictions/results, and points log rows, even after the lock time has passed. This is a hard, unrecoverable delete — not an archive.
 - Each race weekend has its own actual "entry list" (who's really racing that week), separate from the season roster — this is what substitutions get recorded against, and what predictions/results are scored against, so a one-off substitute doesn't affect the permanent roster.
 
 ### Users

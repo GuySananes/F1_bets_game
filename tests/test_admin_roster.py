@@ -511,7 +511,7 @@ def test_admin_can_delete_event_with_no_dependents(client):
         db.close()
 
 
-def test_admin_cannot_delete_event_with_results(client):
+def test_admin_can_delete_event_with_results_and_predictions(client):
     make_admin_client(client)
     season_id, _, driver_id, _ = seed_minimal_roster(client)
     db = client.SessionLocal()
@@ -522,8 +522,15 @@ def test_admin_cannot_delete_event_with_results(client):
         )
         db.add(event)
         db.flush()
+        db.add(EventEntry(event_id=event.id, driver_id=driver_id, is_substitute=False))
         db.add(
             Result(event_id=event.id, session_type=SessionType.race, actual_position=1, driver_id=driver_id)
+        )
+        db.add(
+            Prediction(
+                user_id=1, event_id=event.id, session_type=SessionType.race,
+                predicted_position=1, driver_id=driver_id,
+            )
         )
         db.commit()
         event_id = event.id
@@ -533,9 +540,12 @@ def test_admin_cannot_delete_event_with_results(client):
     response = client.post(f"/admin/events/{event_id}/delete", follow_redirects=False)
 
     assert response.status_code == 303
-    assert "error=" in response.headers["location"]
+    assert "error" not in response.headers["location"]
     db = client.SessionLocal()
     try:
-        assert db.get(Event, event_id) is not None
+        assert db.get(Event, event_id) is None
+        assert db.query(Result).filter_by(event_id=event_id).first() is None
+        assert db.query(Prediction).filter_by(event_id=event_id).first() is None
+        assert db.query(EventEntry).filter_by(event_id=event_id).first() is None
     finally:
         db.close()
