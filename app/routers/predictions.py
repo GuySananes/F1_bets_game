@@ -121,9 +121,7 @@ def overview(
     from app.random_bet import backfill_missing_predictions
 
     event = get_event_or_404(db, event_id)
-    sessions = ["qualifying", "race"]
-    if event.has_sprint:
-        sessions.insert(1, "sprint")
+    sessions = ["sprint", "qualifying", "race"] if event.has_sprint else ["qualifying", "race"]
 
     for s in sessions:
         if event.is_locked(s):

@@ -8,7 +8,7 @@
 {% endif %}
 <table>
   <thead>
-    <tr><th>Round</th><th>Name</th><th>Sprint?</th><th>Grid size</th><th>Qualifying locks</th><th>Sprint locks</th><th>Race locks</th><th></th><th></th></tr>
+    <tr><th>Round</th><th>Name</th><th>Sprint?</th><th>Grid size</th><th>Sprint locks</th><th>Qualifying locks</th><th>Race locks</th><th></th><th></th></tr>
   </thead>
   <tbody>
     {% for event in events %}
@@ -17,8 +17,8 @@
       <td>{{ event.name }}</td>
       <td>{{ "Yes" if event.has_sprint else "No" }}</td>
       <td>{{ event.grid_size }}</td>
-      <td><time data-utc="{{ event.qualifying_start_time.isoformat() }}Z">{{ event.qualifying_start_time }} UTC</time></td>
       <td>{% if event.sprint_start_time %}<time data-utc="{{ event.sprint_start_time.isoformat() }}Z">{{ event.sprint_start_time }} UTC</time>{% else %}—{% endif %}</td>
+      <td><time data-utc="{{ event.qualifying_start_time.isoformat() }}Z">{{ event.qualifying_start_time }} UTC</time></td>
       <td><time data-utc="{{ event.race_start_time.isoformat() }}Z">{{ event.race_start_time }} UTC</time></td>
       <td>
         <a href="/admin/events/{{ event.id }}/entries">Set entries</a> ·
@@ -48,8 +48,8 @@
   <label>Round number <input type="number" name="round_number" min="1" value="{{ season.next_round_number }}" required></label>
   <label><input type="checkbox" name="has_sprint" id="has_sprint"> Has sprint</label>
   <label>Grid size <input type="number" name="grid_size" min="1" required></label>
-  <label>Qualifying start <input type="datetime-local" id="qualifying_start_time_local" required></label>
   <label>Sprint start <input type="datetime-local" id="sprint_start_time_local"></label>
+  <label>Qualifying start <input type="datetime-local" id="qualifying_start_time_local" required></label>
   <label>Race start <input type="datetime-local" id="race_start_time_local" required></label>
   <input type="hidden" name="qualifying_start_time" id="qualifying_start_time">
   <input type="hidden" name="sprint_start_time" id="sprint_start_time">
