@@ -21,6 +21,7 @@
       <td><time data-utc="{{ event.qualifying_start_time.isoformat() }}Z">{{ event.qualifying_start_time }} UTC</time></td>
       <td><time data-utc="{{ event.race_start_time.isoformat() }}Z">{{ event.race_start_time }} UTC</time></td>
       <td>
+        <a href="/admin/events/{{ event.id }}/edit">Edit</a> ·
         <a href="/admin/events/{{ event.id }}/entries">Set entries</a> ·
         <a href="/admin/events/{{ event.id }}/results">Results</a>
       </td>

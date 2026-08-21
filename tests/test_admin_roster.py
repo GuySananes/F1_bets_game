@@ -549,3 +549,100 @@ def test_admin_can_delete_event_with_results_and_predictions(client):
         assert db.query(EventEntry).filter_by(event_id=event_id).first() is None
     finally:
         db.close()
+
+
+def test_admin_can_edit_event_fields(client):
+    make_admin_client(client)
+    season_id, _, _, _ = seed_minimal_roster(client)
+    db = client.SessionLocal()
+    try:
+        event = Event(
+            season_id=season_id, round_number=1, name="Wrong GP", has_sprint=False, grid_size=1,
+            qualifying_start_time=FUTURE, race_start_time=FUTURE,
+        )
+        db.add(event)
+        db.commit()
+        event_id = event.id
+    finally:
+        db.close()
+
+    response = client.post(
+        f"/admin/events/{event_id}/edit",
+        data={
+            "name": "Fixed GP",
+            "round_number": 2,
+            "has_sprint": "on",
+            "grid_size": 5,
+            "qualifying_start_time": "2099-02-01T09:00",
+            "sprint_start_time": "2099-02-01T08:00",
+            "race_start_time": "2099-02-02T13:00",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    db = client.SessionLocal()
+    try:
+        updated = db.get(Event, event_id)
+        assert updated.name == "Fixed GP"
+        assert updated.round_number == 2
+        assert updated.has_sprint is True
+        assert updated.grid_size == 5
+        assert updated.qualifying_start_time == datetime(2099, 2, 1, 9, 0)
+        assert updated.sprint_start_time == datetime(2099, 2, 1, 8, 0)
+        assert updated.race_start_time == datetime(2099, 2, 2, 13, 0)
+    finally:
+        db.close()
+
+
+def test_editing_event_with_results_and_predictions_leaves_them_intact(client):
+    make_admin_client(client)
+    season_id, _, driver_id, _ = seed_minimal_roster(client)
+    db = client.SessionLocal()
+    try:
+        event = Event(
+            season_id=season_id, round_number=1, name="Scored GP", has_sprint=False, grid_size=1,
+            qualifying_start_time=FUTURE, race_start_time=FUTURE,
+        )
+        db.add(event)
+        db.flush()
+        db.add(EventEntry(event_id=event.id, driver_id=driver_id, is_substitute=False))
+        db.add(
+            Result(event_id=event.id, session_type=SessionType.race, actual_position=1, driver_id=driver_id)
+        )
+        db.add(
+            Prediction(
+                user_id=1, event_id=event.id, session_type=SessionType.race,
+                predicted_position=1, driver_id=driver_id,
+            )
+        )
+        db.commit()
+        event_id = event.id
+    finally:
+        db.close()
+
+    form_page = client.get(f"/admin/events/{event_id}/edit")
+    assert "predictions, results, or points" in form_page.text
+
+    response = client.post(
+        f"/admin/events/{event_id}/edit",
+        data={
+            "name": "Scored GP",
+            "round_number": 1,
+            "grid_size": 1,
+            "qualifying_start_time": "2099-03-01T09:00",
+            "race_start_time": "2099-03-02T13:00",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    db = client.SessionLocal()
+    try:
+        updated = db.get(Event, event_id)
+        assert updated.qualifying_start_time == datetime(2099, 3, 1, 9, 0)
+        assert db.query(Result).filter_by(event_id=event_id).first() is not None
+        assert db.query(Prediction).filter_by(event_id=event_id).first() is not None
+        assert db.query(EventEntry).filter_by(event_id=event_id).first() is not None
+    finally:
+        db.close()

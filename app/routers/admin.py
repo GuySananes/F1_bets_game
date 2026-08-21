@@ -335,6 +335,67 @@ def create_event(
     return RedirectResponse(url="/admin/events", status_code=303)
 
 
+@router.get("/events/{event_id}/edit")
+def edit_event_form(
+    request: Request,
+    event_id: int,
+    current_user: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+    error: Optional[str] = None,
+):
+    event = db.get(Event, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    season = get_current_season(db)
+    has_dependents = any(
+        db.query(model).filter_by(event_id=event_id).first() is not None
+        for model in (Prediction, Result, BonusPrediction, BonusResult, PointsLog)
+    )
+    return templates.TemplateResponse(
+        request,
+        "admin/event_edit.html",
+        {
+            "current_user": current_user,
+            "season": season,
+            "event": event,
+            "has_dependents": has_dependents,
+            "error": error,
+        },
+    )
+
+
+@router.post("/events/{event_id}/edit")
+def edit_event(
+    event_id: int,
+    name: str = Form(...),
+    round_number: int = Form(...),
+    has_sprint: Optional[str] = Form(None),
+    grid_size: int = Form(...),
+    qualifying_start_time: str = Form(...),
+    race_start_time: str = Form(...),
+    sprint_start_time: Optional[str] = Form(None),
+    _: User = Depends(require_admin_page),
+    db: Session = Depends(get_db),
+):
+    event = db.get(Event, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    is_sprint = bool(has_sprint)
+    event.name = name
+    event.round_number = round_number
+    event.has_sprint = is_sprint
+    event.grid_size = grid_size
+    event.qualifying_start_time = parse_utc_datetime(qualifying_start_time)
+    event.race_start_time = parse_utc_datetime(race_start_time)
+    event.sprint_start_time = (
+        parse_utc_datetime(sprint_start_time) if (is_sprint and sprint_start_time) else None
+    )
+    db.commit()
+    return RedirectResponse(url="/admin/events", status_code=303)
+
+
 @router.post("/season/next-round-number")
 def set_next_round_number(
     next_round_number: int = Form(...),

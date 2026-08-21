@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Edit event — Admin{% endblock %}
+{% block content %}
+<p><a href="/admin/events">&larr; Events</a></p>
+<h2>Edit {{ event.name }} — {{ season.name }}</h2>
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
+{% if has_dependents %}
+<p class="error">This event already has predictions, results, or points recorded. Changing lock times may unexpectedly lock or unlock betting for users.</p>
+{% endif %}
+<form method="post" action="/admin/events/{{ event.id }}/edit" id="edit-event-form"{% if has_dependents %} onsubmit="return confirm('This event has predictions, results, or points on record. Save changes anyway?');"{% endif %}>
+  <label>Name <input type="text" name="name" value="{{ event.name }}" required></label>
+  <label>Round number <input type="number" name="round_number" min="1" value="{{ event.round_number }}" required></label>
+  <label><input type="checkbox" name="has_sprint" id="has_sprint" {% if event.has_sprint %}checked{% endif %}> Has sprint</label>
+  <label>Grid size <input type="number" name="grid_size" min="1" value="{{ event.grid_size }}" required></label>
+  <label>Sprint start <input type="datetime-local" id="sprint_start_time_local" data-utc="{{ event.sprint_start_time.isoformat() ~ 'Z' if event.sprint_start_time else '' }}"></label>
+  <label>Qualifying start <input type="datetime-local" id="qualifying_start_time_local" data-utc="{{ event.qualifying_start_time.isoformat() }}Z" required></label>
+  <label>Race start <input type="datetime-local" id="race_start_time_local" data-utc="{{ event.race_start_time.isoformat() }}Z" required></label>
+  <input type="hidden" name="qualifying_start_time" id="qualifying_start_time">
+  <input type="hidden" name="sprint_start_time" id="sprint_start_time">
+  <input type="hidden" name="race_start_time" id="race_start_time">
+  <button type="submit">Save changes</button>
+</form>
+<script>
+  (function () {
+    function pad(n) { return String(n).padStart(2, "0"); }
+    function toLocalInputValue(date) {
+      return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate()) +
+        "T" + pad(date.getHours()) + ":" + pad(date.getMinutes());
+    }
+    ["sprint_start_time_local", "qualifying_start_time_local", "race_start_time_local"].forEach(function (id) {
+      var input = document.getElementById(id);
+      var utc = input.getAttribute("data-utc");
+      if (utc) {
+        input.value = toLocalInputValue(new Date(utc));
+      }
+    });
+
+    var form = document.getElementById("edit-event-form");
+    form.addEventListener("submit", function () {
+      [["qualifying_start_time_local", "qualifying_start_time"],
+       ["sprint_start_time_local", "sprint_start_time"],
+       ["race_start_time_local", "race_start_time"]].forEach(function (pair) {
+        var localInput = document.getElementById(pair[0]);
+        var hiddenInput = document.getElementById(pair[1]);
+        hiddenInput.value = localInput.value ? new Date(localInput.value).toISOString() : "";
+      });
+    });
+  })();
+</script>
+{% endblock %}
